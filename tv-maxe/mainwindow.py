@@ -121,10 +121,14 @@ class TVMaxeMainWindow(QMainWindow):
     def video_playback_stopped(self, channel):
         self.play_btn.setIcon(TXIcon('icons/play-button.svg'))
         self.progress_label.setText(self.tr("Idle"))
+        self.progress_bar.hide()
+        self.progress_bar.setMaximum(1)
 
     def video_playback_error(self, channel):
         self.play_btn.setIcon(TXIcon('icons/play-button.svg'))
         self.progress_label.setText(self.tr("Channel not available: {0}".format(channel.name)))
+        self.progress_bar.hide()
+        self.progress_bar.setMaximum(1)
 
     def video_volume_changed(self, value):
         self.volume_slider.setValue(int(value))
