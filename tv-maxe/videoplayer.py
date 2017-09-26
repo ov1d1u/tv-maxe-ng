@@ -69,7 +69,7 @@ class VideoPlayer(QWidget):
 
     def protocol_error(self, url, error_message):
         self.unregister_observers()
-        self.player.stop()
+        self.player.command('stop')
         self.protocol.stop()
         self.protocol = None
 

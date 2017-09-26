@@ -1,10 +1,10 @@
 import os
 import subprocess
-import threading
 import shutil
 import time
 import requests
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QThread, QTimer
 
 from protocols import Protocol
 
@@ -22,6 +22,14 @@ class SopCast(Protocol):
             self.spsc = shutil.which(spsc)
             if self.spsc:
                 break
+
+        self.protocol_ready_emited = False
+        self.monitor_thread = QThread(self)
+        self.monitor_timer = QTimer()
+        self.monitor_timer.setInterval(500);
+        self.monitor_timer.moveToThread(self.monitor_thread)
+        self.monitor_timer.timeout.connect(self._monitor_connection)
+        self.monitor_thread.started.connect(self.monitor_timer.start);
 
         if not self.spsc:
             raise OSError(42, "SopCast executable not found")
@@ -46,28 +54,24 @@ class SopCast(Protocol):
         s.close()
         return port
 
-    def _waitConnection(self):
-        progress = 0.0
-        protocol_ready_emited = False
-        while self.spc:
-            if not protocol_ready_emited:
-                try:
-                    r = requests.head('http://127.0.0.1:{0}'.format(self.outport))
-                    if r.status_code != 200:
-                        raise ValueError('HTTP Server Not Ready')
-                    self.protocol_ready.emit(
-                        "http://127.0.0.1:{0}".format(self.outport))
-                    protocol_ready_emited = True
-                except Exception as e:
-                    time.sleep(1)
-                    continue
+    def _monitor_connection(self):
+        if not self.protocol_ready_emited:
+            try:
+                r = requests.head('http://127.0.0.1:{0}'.format(self.outport))
+                if r.status_code != 200:
+                    raise ValueError('HTTP Server Not Ready')
+                self.protocol_ready.emit(
+                    "http://127.0.0.1:{0}".format(self.outport))
+                self.protocol_ready_emited = True
+            except Exception as e:
+                return
 
-            errorlevel = self.spc.poll()
-            if  errorlevel:
-                if errorlevel != -9:
-                    self.protocol_error.emit("Stream not available.")
-                    self.spc = None
-                    self.url = None
+        errorlevel = self.spc.poll()
+        if  errorlevel:
+            if errorlevel != -9:
+                self.protocol_error.emit(self.url, "Stream not available.")
+                self.spc = None
+                self.url = None
 
     def load_url(self, url):
         self.url = url
@@ -81,7 +85,7 @@ class SopCast(Protocol):
                 ],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE)
-            threading.Thread(target=self._waitConnection).start()
+            self.monitor_thread.start()
         except Exception as e:
             print(e)
             self.protocol_error.emit(url, "Cannot start SopCast executable.")
@@ -90,8 +94,13 @@ class SopCast(Protocol):
 
     def stop(self):
         self.url = None
+        self.protocol_ready_emited = None
+        self.monitor_thread.terminate()
         if self.spc:
-            os.kill(self.spc.pid, 9)
+            try:
+                os.kill(self.spc.pid, 9)
+            except ProcessLookupError as e:
+                print('SopCast is already ded :(')
             self.spc = None
 
 
