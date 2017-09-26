@@ -2,6 +2,8 @@ import os
 import subprocess
 import threading
 import shutil
+import time
+import requests
 from PyQt5.QtWidgets import QApplication
 
 from protocols import Protocol
@@ -48,25 +50,24 @@ class SopCast(Protocol):
         progress = 0.0
         protocol_ready_emited = False
         while self.spc:
-            line = self.spc.stdout.readline().decode("utf-8")
-            if 'nblockAvailable' in line:
-                col = line.split()
+            if not protocol_ready_emited:
                 try:
-                    pr = col[2].split('=')
-                    progress = float(pr[1])
-                    # self.bufferProgress.emit(progress)
-                except:
-                    pass
-                if progress > 60 and protocol_ready_emited == False:
+                    r = requests.head('http://127.0.0.1:{0}'.format(self.outport))
+                    if r.status_code != 200:
+                        raise ValueError('HTTP Server Not Ready')
                     self.protocol_ready.emit(
                         "http://127.0.0.1:{0}".format(self.outport))
                     protocol_ready_emited = True
-                errorlevel = self.spc.poll()
-                if  errorlevel:
-                    if errorlevel != -9:
-                        self.protocol_error.emit("Stream not available.")
-                        self.spc = None
-                        self.url = None
+                except Exception as e:
+                    time.sleep(1)
+                    continue
+
+            errorlevel = self.spc.poll()
+            if  errorlevel:
+                if errorlevel != -9:
+                    self.protocol_error.emit("Stream not available.")
+                    self.spc = None
+                    self.url = None
 
     def load_url(self, url):
         self.url = url
