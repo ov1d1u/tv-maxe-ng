@@ -103,6 +103,7 @@ class TVMaxeMainWindow(QMainWindow):
             self.radio_channel_list.addChannel(channel)
 
     def play_channel(self, channel):
+        self.video_player.stop()
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(0)
         self.progress_bar.show()
