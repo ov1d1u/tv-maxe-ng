@@ -1,6 +1,6 @@
 import logging
+import platform
 from PyQt5 import uic
-from PyQt5.QtCore import QSysInfo
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QSizeGrip
 
@@ -37,9 +37,9 @@ class TVMaxeMainWindow(QMainWindow):
         self.progress_label.setText(self.tr("Idle"))
         self.video_player.set_volume(self.volume_slider.value())
 
-        os_type = QSysInfo.kernelType()
+        os_type = platform.system()
         log.info('Detected OS type: {0}'.format(os_type))
-        if os_type == 'darwin':
+        if os_type == 'Darwin':
             self.playlist_tab_widget.setDocumentMode(True)
 
         self.load_settings()
