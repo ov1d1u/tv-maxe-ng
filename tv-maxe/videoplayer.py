@@ -1,5 +1,6 @@
 import mpv
-from PyQt5.QtCore import Qt, QMessageLogger, QTimer, pyqtSignal
+import logging
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
 from PyQt5.QtGui import QKeyEvent, QCursor
 from urllib.parse import urlparse
@@ -7,6 +8,8 @@ from enum import Enum, auto
 
 from models.channel import Channel
 from fullscreentoolbar import FullscreenToolbar
+
+log = logging.getLogger(__name__)
 
 class VideoPlayerState(Enum):
     PLAYER_UNKNOWN = auto()
@@ -47,39 +50,49 @@ class VideoPlayer(QWidget):
         return VideoPlayerState.PLAYER_UNKNOWN
 
     def play_channel(self, channel):
+        log.debug('Playing channel {0}'.format(channel.id))
         self.channel = channel
         app = QApplication.instance()
         url = self.channel.streamurls[0]
+        log.debug('Selected url: {0}'.format(url))
         url_components = urlparse(url)
         if app.protocol_plugins.get(url_components.scheme, None):
             protocol_class = app.protocol_plugins[url_components.scheme]
+            log.debug('Using {0} to process {1}'.format(protocol_class, url))
             self.protocol = protocol_class()
             self.protocol.protocol_ready.connect(self.protocol_ready)
             self.protocol.protocol_error.connect(self.protocol_error)
             self.protocol.load_url(url)
+        else:
+            log.error('No suitable protocol found for {0}'.format(url))
 
     def protocol_ready(self, url):
         self.player.observe_property('core-idle', self.idle_observer)
         self.player.register_message_handler('commands', self.command_received)
         self.player.register_event_callback(self.event_observer)
+        log.debug('Ready to play {0} via {1}'.format(self.channel.id, url))
         self.player.play(url)
 
     def command_received(self, args):
         print (args)
 
     def protocol_error(self, url, error_message):
+        log.debug('Protocol returned error, stopping playback')
         self.unregister_observers()
         self.player.command('stop')
         self.protocol.stop()
         self.protocol = None
 
     def pause(self):
+        log.debug('pause')
         self.player.pause = True
 
     def unpause(self):
+        log.debug('resume')
         self.player.pause = False
 
     def stop(self):
+        log.debug('stop')
         self.unregister_observers()
         self.player.command('stop')
         self.exit_fullscreen()
@@ -90,6 +103,7 @@ class VideoPlayer(QWidget):
             self.playback_stopped.emit(self.channel)
 
     def set_volume(self, volume):
+        log.debug('set_volume: {0}'.format(volume))
         self.player.volume = volume
         self.volume_changed.emit(volume)
 
@@ -112,6 +126,7 @@ class VideoPlayer(QWidget):
         self.showFullScreen()
         self.setFocusPolicy(Qt.StrongFocus)
         self.fullscreen_changed.emit(True)
+        log.debug('Switched to fullscreen')
 
     def exit_fullscreen(self):
         if self.window().findChild(VideoPlayer, "video_player"):
@@ -125,11 +140,14 @@ class VideoPlayer(QWidget):
         self.property('old-window').showNormal()
         # self.overrideWindowFlags(Qt.WindowFlags(self.property('old-windowflags')))
         self.fullscreen_changed.emit(False)
+        log.debug('Returned from fullscreen')
 
     def event_observer(self, event):
         event_id = event.get('event_id', None)
+        log.debug('Received event id: {0}'.format(event_id))
         if event_id == 7:  # end-file
             reason = event['event']['reason']
+            log.debug('- Reason: {0}'.format(reason))
             if reason == 0:  # EOF
                 self.stop()
             elif reason == 2:  # Playback was stopped by an external action (e.g. playlist controls).
@@ -146,19 +164,21 @@ class VideoPlayer(QWidget):
 
     def idle_observer(self, name, value):
         if value == False:
+            log.debug('Started playback')
             self.playback_started.emit(self.channel)
         else:
+            log.debug('Stopped playback')
             self.playback_paused.emit(self.channel)
 
     def unregister_observers(self):
         try:
             self.player.unregister_event_callback(self.event_observer)
         except ValueError:
-            QMessageLogger().debug("Failed to unregister from mpv events")
+            log.warn("Failed to unregister from mpv events")
         try:
             self.player.unobserve_property('core-idle', self.idle_observer)
         except ValueError:
-            QMessageLogger().debug("Failed to unregister as a mpv observer")
+            log.warn("Failed to unregister as a mpv observer")
 
     def _hide_mouse(self):
         if self.fullscreen_toolbar.isHidden():

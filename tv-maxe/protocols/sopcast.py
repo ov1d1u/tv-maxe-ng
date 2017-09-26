@@ -3,10 +3,13 @@ import subprocess
 import shutil
 import time
 import requests
+import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread, QTimer
 
 from protocols import Protocol
+
+log = logging.getLogger(__name__)
 
 class SopCast(Protocol):
     name = "SopCast Protocol"
@@ -21,6 +24,7 @@ class SopCast(Protocol):
         for spsc in ["sp-sc", "sp-sc-auth", "sop"]:
             self.spsc = shutil.which(spsc)
             if self.spsc:
+                log.debug('Found SopCast executable at {0}'.format(self.spsc))
                 break
 
         self.protocol_ready_emited = False
@@ -32,6 +36,7 @@ class SopCast(Protocol):
         self.monitor_thread.started.connect(self.monitor_timer.start);
 
         if not self.spsc:
+            log.error("SopCast executable not found")
             raise OSError(42, "SopCast executable not found")
 
         settings = QApplication.instance().settings_manager
@@ -44,6 +49,9 @@ class SopCast(Protocol):
             self.outport = int(settings.value("sopcast/outport"))
         else:
             self.outport = self._get_open_port()
+
+        log.debug('inport: {0}'.format(self.inport))
+        log.debug('outport: {0}'.format(self.outport))
 
     def _get_open_port(self):
         import socket
@@ -60,6 +68,7 @@ class SopCast(Protocol):
                 r = requests.head('http://127.0.0.1:{0}'.format(self.outport))
                 if r.status_code != 200:
                     raise ValueError('HTTP Server Not Ready')
+                log.debug('Ready to play, emitting signal')
                 self.protocol_ready.emit(
                     "http://127.0.0.1:{0}".format(self.outport))
                 self.protocol_ready_emited = True
@@ -74,6 +83,7 @@ class SopCast(Protocol):
                 self.url = None
 
     def load_url(self, url):
+        log.debug('Loading url: {0}'.format(url))
         self.url = url
         try:
             self.spc = subprocess.Popen(
@@ -93,6 +103,7 @@ class SopCast(Protocol):
             self.url = None
 
     def stop(self):
+        log.debug('Stopping')
         self.url = None
         self.protocol_ready_emited = None
         self.monitor_thread.terminate()
@@ -100,7 +111,8 @@ class SopCast(Protocol):
             try:
                 os.kill(self.spc.pid, 9)
             except ProcessLookupError as e:
-                print('SopCast is already ded :(')
+                log.debug('SopCast cannot be killed because it is already killed')
+                log.debug('What is dead may never die')
             self.spc = None
 
 

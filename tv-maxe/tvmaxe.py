@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import sys
 import os
+import logger
+import logging
+import argparse
 from os.path import isfile, join, splitext
 from importlib import import_module
 from PyQt5 import QtCore, QtWidgets, uic
@@ -9,6 +12,8 @@ from PyQt5.QtGui import QIcon, QPixmap
 from settingsmanager import SettingsManager
 from mainwindow import TVMaxeMainWindow
 
+log = logging.getLogger(__name__)
+
 class TVMaxe(QtWidgets.QApplication):
     protocol_plugins = {}
 
@@ -16,12 +21,17 @@ class TVMaxe(QtWidgets.QApplication):
         super(QtWidgets.QApplication, self).__init__(argv)
 
         self.setApplicationName("TV-Maxe")
-        self.setOrganizationName("Ovidiu Nitan")
+        self.setApplicationVersion("0.1a")
+        self.setOrganizationDomain("org.tv-maxe.app")
+        self.setOrganizationName("TV-Maxe")
 
-        self.settings_manager = SettingsManager(self.organizationName(), self.applicationName())
+        log.info('{0} {1}'.format(self.applicationName(), self.applicationVersion()))
+
+        self.settings_manager = SettingsManager()
 
         self.init_plugins()
 
+        log.debug('Current localization: {0}'.format(QtCore.QLocale.system().name()))
         translator = QtCore.QTranslator()
         translator.load("i18n/{0}.qm".format(QtCore.QLocale.system().name()))
         self.installTranslator(translator)
@@ -29,6 +39,7 @@ class TVMaxe(QtWidgets.QApplication):
         self.mainw.show()
 
     def init_plugins(self):
+        log.debug('Initializing plugins:')
         protocols_dir = 'protocols'
         sys.path.insert(0, 'protocols/')
 
@@ -40,10 +51,38 @@ class TVMaxe(QtWidgets.QApplication):
             if extension == '.py':
                 protocol_module = import_module(file)
                 protocol_class = protocol_module.__classname__
+                log.debug('- Plugin found: {0} {1} ({2})'.format(
+                    protocol_module.__classname__.name,
+                    protocol_module.__classname__.version, 
+                    protocol_module.__classname__)
+                )
                 for protocol in protocol_class.protocols:
                     self.protocol_plugins[protocol] = protocol_class
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--log-level",
+        help="Sets the logger verbosity",
+        choices=["debug", "warn", "info"]
+    )
+    args = parser.parse_args()
+
+    if args.log_level:
+        if args.log_level == 'debug':
+            logger.set_logging_level(logging.DEBUG)
+        elif args.log_level == 'warn':
+            logger.set_logging_level(logging.WARNING)
+        else:
+            logger.set_logging_level(logging.INFO)
+    else:
+        logger.set_logging_level(logging.INFO)
+
 if __name__ == '__main__':
+    parse_args()
+    log.debug('Current working directory: {0}'.format(os.path.dirname(os.path.realpath(__file__))))
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     app = TVMaxe(sys.argv)
     sys.exit(app.exec_())
+    log.debug('Exiting app...')

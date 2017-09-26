@@ -1,13 +1,17 @@
-from PyQt5 import QtCore, QtWidgets, uic
+import logging
+from PyQt5 import uic
+from PyQt5.QtCore import QSysInfo
 from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import QApplication, QTabWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QSizeGrip
 
 from channellistmanager import ChannelListManager
 from txicon import TXIcon
 
-class TVMaxeMainWindow(QtWidgets.QMainWindow):
+log = logging.getLogger(__name__)
+
+class TVMaxeMainWindow(QMainWindow):
     def __init__(self, parent):
-        super(QtWidgets.QMainWindow, self).__init__(parent)
+        super(QMainWindow, self).__init__(parent)
         uic.loadUi('ui/mainWindow.ui', self)
 
         self.chlist_manager = ChannelListManager()
@@ -27,12 +31,14 @@ class TVMaxeMainWindow(QtWidgets.QMainWindow):
         self.video_player.volume_changed.connect(self.video_volume_changed)
 
         self.statusbar.hide()
-        self.bottom_layout.addWidget(QtWidgets.QSizeGrip(self))
+        self.bottom_layout.addWidget(QSizeGrip(self))
         self.splitter.setStretchFactor(1, 1)
         self.progress_bar.hide()
         self.progress_label.setText(self.tr("Idle"))
         self.video_player.set_volume(self.volume_slider.value())
-        os_type = QtCore.QSysInfo.kernelType()
+
+        os_type = QSysInfo.kernelType()
+        log.info('Detected OS type: {0}'.format(os_type))
         if os_type == 'darwin':
             self.playlist_tab_widget.setDocumentMode(True)
 
@@ -48,6 +54,7 @@ class TVMaxeMainWindow(QtWidgets.QMainWindow):
         ])
 
     def load_settings(self):
+        log.debug('Loading settings...')
         app = QApplication.instance()
         settings = app.settings_manager
         try:
@@ -65,6 +72,7 @@ class TVMaxeMainWindow(QtWidgets.QMainWindow):
 
         if settings.value("player/volume"):
             self.video_player.set_volume(int(settings.value("player/volume")))
+        log.debug('Settings loaded')
 
     def play_btn_clicked(self, checked=False):
         from videoplayer import VideoPlayerState
