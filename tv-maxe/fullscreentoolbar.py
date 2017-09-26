@@ -11,7 +11,7 @@ class FullscreenToolbar(QWidget):
 
         uic.loadUi('ui/fullscreenToolbar.ui', self)
 
-        self.setWindowFlags(Qt.Dialog|Qt.Widget|Qt.FramelessWindowHint);
+        self.setWindowFlags(Qt.Tool|Qt.Widget|Qt.FramelessWindowHint);
         self.setAttribute(Qt.WA_NoSystemBackground, True);
         self.setAttribute(Qt.WA_TranslucentBackground, True); 
 

@@ -104,8 +104,8 @@ class VideoPlayer(QWidget):
             return
 
         self.setProperty('old-window', self.window())
-        self.setProperty('old-windowflags', self.windowFlags())
-        self.overrideWindowFlags(Qt.FramelessWindowHint)
+        # self.setProperty('old-windowflags', self.windowFlags())
+        # self.overrideWindowFlags(Qt.FramelessWindowHint)
         self.window().hide()
         self.setWindowTitle(' ')
         self.setParent(None)
@@ -121,9 +121,9 @@ class VideoPlayer(QWidget):
             return
 
         self.fullscreen_toolbar.hide()
-        self.property('old-window').showNormal()
         self.property('old-window').video_player_layout.addWidget(self)
-        self.overrideWindowFlags(Qt.WindowFlags(self.property('old-windowflags')))
+        self.property('old-window').showNormal()
+        # self.overrideWindowFlags(Qt.WindowFlags(self.property('old-windowflags')))
         self.fullscreen_changed.emit(False)
 
     def event_observer(self, event):
