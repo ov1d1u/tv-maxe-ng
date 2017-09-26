@@ -144,8 +144,8 @@ class VideoPlayer(QWidget):
 
     def event_observer(self, event):
         event_id = event.get('event_id', None)
-        log.debug('Received event id: {0}'.format(event_id))
-        if event_id == 7:  # end-file
+        log.debug('Received event id: {0} data: {1}'.format(event_id, event))
+        if event_id == mpv.MpvEventID.END_FILE:  # end-file
             reason = event['event']['reason']
             log.debug('- Reason: {0}'.format(reason))
             if reason == 0:  # EOF
@@ -161,14 +161,24 @@ class VideoPlayer(QWidget):
                     self.protocol.stop()
                     self.protocol = None
 
-
     def idle_observer(self, name, value):
+        log.debug('idle_observer: {0} {1}'.format(name, value))
         if value == False:
             log.debug('Started playback')
             self.playback_started.emit(self.channel)
         else:
-            log.debug('Stopped playback')
-            self.playback_paused.emit(self.channel)
+            if self.player.cache_used:
+                # This is also called when playback was paused because the network cache is empty.
+                # Emit `playback_paused` only if the user paused the playback
+                cache_used = None
+                try:
+                    cache_used = int(self.player.cache_used)
+                except:
+                    pass
+
+                if cache_used != 0:
+                    log.debug('Paused playback')
+                    self.playback_paused.emit(self.channel)
 
     def unregister_observers(self):
         try:
