@@ -128,9 +128,7 @@ class VideoPlayer(QWidget):
 
     def event_observer(self, event):
         event_id = event.get('event_id', None)
-        if event_id == 6:
-            self.playback_started.emit(self.channel)
-        elif event_id == 7:  # end-file
+        if event_id == 7:  # end-file
             reason = event['event']['reason']
             if reason == 0:  # EOF
                 self.stop()
