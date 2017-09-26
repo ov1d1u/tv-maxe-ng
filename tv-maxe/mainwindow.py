@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtWidgets, uic
 from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QTabWidget
 
 from channellistmanager import ChannelListManager
 from txicon import TXIcon
@@ -32,6 +32,9 @@ class TVMaxeMainWindow(QtWidgets.QMainWindow):
         self.progress_bar.hide()
         self.progress_label.setText(self.tr("Idle"))
         self.video_player.set_volume(self.volume_slider.value())
+        os_type = QtCore.QSysInfo.kernelType()
+        if os_type == 'darwin':
+            self.playlist_tab_widget.setDocumentMode(True)
 
         self.load_settings()
 
