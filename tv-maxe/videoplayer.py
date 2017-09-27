@@ -62,6 +62,7 @@ class VideoPlayer(QWidget):
             self.protocol = protocol_class()
             self.protocol.protocol_ready.connect(self.protocol_ready)
             self.protocol.protocol_error.connect(self.protocol_error)
+            self.protocol.protocol_finished.connect(self.protocol_finished)
             self.protocol.load_url(url)
         else:
             log.error('No suitable protocol found for {0}'.format(url))
@@ -81,6 +82,8 @@ class VideoPlayer(QWidget):
         self.unregister_observers()
         self.player.command('stop')
         self.protocol.stop()
+
+    def protocol_finished(self):
         self.protocol = None
 
     def pause(self):
@@ -98,7 +101,6 @@ class VideoPlayer(QWidget):
         self.exit_fullscreen()
         if self.protocol:
             self.protocol.stop()
-            self.protocol = None
         self.playback_stopped.emit(self.channel)
 
     def set_volume(self, volume):
@@ -158,7 +160,6 @@ class VideoPlayer(QWidget):
                 self.unregister_observers()
                 if self.protocol:
                     self.protocol.stop()
-                    self.protocol = None
 
     def idle_observer(self, name, value):
         log.debug('idle_observer: {0} {1}'.format(name, value))

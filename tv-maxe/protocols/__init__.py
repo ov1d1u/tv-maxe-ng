@@ -9,6 +9,7 @@ class Protocol(QObject):
 
     protocol_ready = pyqtSignal(str)
     protocol_error = pyqtSignal(str, str)
+    protocol_finished = pyqtSignal()
 
     def __init__(self):
         super().__init__()

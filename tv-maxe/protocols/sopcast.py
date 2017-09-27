@@ -96,7 +96,7 @@ class SopCast(Protocol):
                 self.spc = None
                 self.url = None
 
-    def load_url(self, url, args):
+    def load_url(self, url, args=None):
         log.debug('Loading url: {0}'.format(url))
         self.url = url
         try:
@@ -127,6 +127,7 @@ class SopCast(Protocol):
                 log.debug('SopCast cannot be killed because it is already killed')
                 log.debug('What is dead may never die')
             self.spc = None
+        self.protocol_finished.emit()
 
 
 __classname__ = SopCast
