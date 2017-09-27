@@ -1,5 +1,6 @@
 import mpv
 import logging
+import platform
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
 from PyQt5.QtGui import QKeyEvent, QCursor
@@ -137,8 +138,12 @@ class VideoPlayer(QWidget):
             return
 
         self.fullscreen_toolbar.hide()
-        self.property('old-window').video_player_layout.addWidget(self)
-        self.property('old-window').showNormal()
+        if platform.system() == 'Darwin':
+            self.property('old-window').video_player_layout.addWidget(self)
+            self.property('old-window').showNormal()
+        else:
+            self.property('old-window').showNormal()
+            self.property('old-window').video_player_layout.addWidget(self)
         # self.overrideWindowFlags(Qt.WindowFlags(self.property('old-windowflags')))
         self.fullscreen_changed.emit(False)
         log.debug('Returned from fullscreen')
