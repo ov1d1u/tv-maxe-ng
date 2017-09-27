@@ -19,10 +19,10 @@ class VideoPlayerState(Enum):
     PLAYER_PAUSED = auto()
 
 class VideoPlayer(QWidget):
-    playback_started = pyqtSignal(Channel)
-    playback_paused = pyqtSignal(Channel)
-    playback_stopped = pyqtSignal(Channel)
-    playback_error = pyqtSignal(Channel)
+    playback_started = pyqtSignal('PyQt_PyObject')
+    playback_paused = pyqtSignal('PyQt_PyObject')
+    playback_stopped = pyqtSignal('PyQt_PyObject')
+    playback_error = pyqtSignal('PyQt_PyObject')
     volume_changed = pyqtSignal(int)
     fullscreen_changed = pyqtSignal(bool)
 
@@ -94,13 +94,12 @@ class VideoPlayer(QWidget):
     def stop(self):
         log.debug('stop')
         self.unregister_observers()
-        self.player.command('stop')
+        self.player.play('')
         self.exit_fullscreen()
         if self.protocol:
             self.protocol.stop()
             self.protocol = None
-        if self.channel:
-            self.playback_stopped.emit(self.channel)
+        self.playback_stopped.emit(self.channel)
 
     def set_volume(self, volume):
         log.debug('set_volume: {0}'.format(volume))
