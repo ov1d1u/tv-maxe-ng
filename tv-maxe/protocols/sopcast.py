@@ -5,11 +5,30 @@ import time
 import requests
 import logging
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QThread, QTimer
+from PyQt5.QtCore import Qt, QThread, QObject, QTimer, QMetaObject, pyqtSignal
 
 from protocols import Protocol
 
 log = logging.getLogger(__name__)
+
+class Worker(QObject):
+    do_work = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.timer = QTimer()
+        self.timer.setInterval(500)
+        self.timer.timeout.connect(self._do_work)
+
+    def startTimer(self):
+        self.timer.start()
+
+    def stopTimer(self):
+        self.timer.stop()
+
+    def _do_work(self):
+        self.do_work.emit()
+
 
 class SopCast(Protocol):
     name = "SopCast Protocol"
@@ -29,11 +48,10 @@ class SopCast(Protocol):
 
         self.protocol_ready_emited = False
         self.monitor_thread = QThread(self)
-        self.monitor_timer = QTimer()
-        self.monitor_timer.setInterval(500);
-        self.monitor_timer.moveToThread(self.monitor_thread)
-        self.monitor_timer.timeout.connect(self._monitor_connection)
-        self.monitor_thread.started.connect(self.monitor_timer.start);
+        self.worker = Worker()
+        self.worker.do_work.connect(self._monitor_connection)
+        self.monitor_thread.started.connect(self.worker.startTimer)
+        self.worker.moveToThread(self.monitor_thread)
 
         if not self.spsc:
             log.error("SopCast executable not found")
@@ -63,6 +81,10 @@ class SopCast(Protocol):
         return port
 
     def _monitor_connection(self):
+        if not self.spc:
+            self.worker.stopTimer()
+            return
+        
         if not self.protocol_ready_emited:
             try:
                 r = requests.head('http://127.0.0.1:{0}'.format(self.outport))
@@ -106,7 +128,6 @@ class SopCast(Protocol):
         log.debug('Stopping')
         self.url = None
         self.protocol_ready_emited = None
-        self.monitor_thread.terminate()
         if self.spc:
             try:
                 os.kill(self.spc.pid, 9)
