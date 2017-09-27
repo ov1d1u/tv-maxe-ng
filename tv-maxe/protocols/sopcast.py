@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QThread, QObject, QTimer, QMetaObject, pyqtSignal
 
 from protocols import Protocol
+from util import get_open_port
 
 log = logging.getLogger(__name__)
 
@@ -61,30 +62,21 @@ class SopCast(Protocol):
         if (settings.value("sopcast/inport")):
             self.inport = int(settings.value("sopcast/inport"))
         else:
-            self.inport = self._get_open_port()
+            self.inport = get_open_port()
 
         if (settings.value("sopcast/outport")):
             self.outport = int(settings.value("sopcast/outport"))
         else:
-            self.outport = self._get_open_port()
+            self.outport = get_open_port()
 
         log.debug('inport: {0}'.format(self.inport))
         log.debug('outport: {0}'.format(self.outport))
-
-    def _get_open_port(self):
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("",0))
-        s.listen(1)
-        port = s.getsockname()[1]
-        s.close()
-        return port
 
     def _monitor_connection(self):
         if not self.spc:
             self.worker.stopTimer()
             return
-        
+
         if not self.protocol_ready_emited:
             try:
                 r = requests.head('http://127.0.0.1:{0}'.format(self.outport))
@@ -104,7 +96,7 @@ class SopCast(Protocol):
                 self.spc = None
                 self.url = None
 
-    def load_url(self, url):
+    def load_url(self, url, args):
         log.debug('Loading url: {0}'.format(url))
         self.url = url
         try:

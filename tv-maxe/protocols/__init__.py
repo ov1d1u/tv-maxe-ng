@@ -14,7 +14,7 @@ class Protocol(QObject):
         super().__init__()
         self.app = QApplication.instance()
 
-    def load_url(self, url):
+    def load_url(self, url, args=None):
         pass
 
     def stop(self):
