@@ -1,4 +1,7 @@
 from protocols import Protocol
+import logging
+
+log = logging.getLogger(__name__)
 
 class HTTP(Protocol):
     name = "HTTP Protocol"
@@ -6,14 +9,14 @@ class HTTP(Protocol):
     version = "0.01"
     protocols = ["http", "https"]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
     def load_url(self, url):
         self.protocol_ready.emit(url)
 
     def stop(self):
-        pass
+        self.deleteLater()
 
 
 __classname__ = HTTP

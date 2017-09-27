@@ -9,10 +9,9 @@ class Protocol(QObject):
 
     protocol_ready = pyqtSignal(str)
     protocol_error = pyqtSignal(str, str)
-    protocol_finished = pyqtSignal()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.app = QApplication.instance()
 
     def load_url(self, url, args=None):

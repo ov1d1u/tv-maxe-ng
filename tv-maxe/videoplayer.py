@@ -1,6 +1,5 @@
 import mpv
 import logging
-import platform
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
 from PyQt5.QtGui import QKeyEvent, QCursor
@@ -60,31 +59,29 @@ class VideoPlayer(QWidget):
         if app.protocol_plugins.get(url_components.scheme, None):
             protocol_class = app.protocol_plugins[url_components.scheme]
             log.debug('Using {0} to process {1}'.format(protocol_class, url))
-            self.protocol = protocol_class()
+            self.protocol = protocol_class(self)
             self.protocol.protocol_ready.connect(self.protocol_ready)
             self.protocol.protocol_error.connect(self.protocol_error)
-            self.protocol.protocol_finished.connect(self.protocol_finished)
             self.protocol.load_url(url)
         else:
             log.error('No suitable protocol found for {0}'.format(url))
 
     def protocol_ready(self, url):
         self.player.observe_property('core-idle', self.idle_observer)
-        self.player.register_message_handler('commands', self.command_received)
         self.player.register_event_callback(self.event_observer)
         log.debug('Ready to play {0} via {1}'.format(self.channel.id, url))
         self.player.play(url)
-
-    def command_received(self, args):
-        print (args)
 
     def protocol_error(self, url, error_message):
         log.debug('Protocol returned error, stopping playback')
         self.unregister_observers()
         self.player.command('stop')
-        self.protocol.stop()
+        self.deactivate_protocol()
 
-    def protocol_finished(self):
+    def deactivate_protocol(self):
+        self.protocol.protocol_ready.disconnect()
+        self.protocol.protocol_error.disconnect()
+        self.protocol.stop()
         self.protocol = None
 
     def pause(self):
@@ -101,7 +98,7 @@ class VideoPlayer(QWidget):
         self.player.play('')
         self.exit_fullscreen()
         if self.protocol:
-            self.protocol.stop()
+            self.deactivate_protocol()
         self.playback_stopped.emit(self.channel)
 
     def set_volume(self, volume):
@@ -164,7 +161,7 @@ class VideoPlayer(QWidget):
                 self.playback_error.emit(self.channel)
                 self.unregister_observers()
                 if self.protocol:
-                    self.protocol.stop()
+                    self.deactivate_protocol()
 
     def idle_observer(self, name, value):
         log.debug('idle_observer: {0} {1}'.format(name, value))
