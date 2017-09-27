@@ -19,24 +19,23 @@ class RequestHandler(BaseHTTPRequestHandler):
         while data:
             try:
                 self.wfile.write(data)
-            except BrokenPipeError as e:
+            except (BrokenPipeError, ConnectionResetError) as e:
                 break
             data = self.server.rtmp_stream.read(BUF_SIZE)
 
         self.server.socket.close()
         log.debug('End of stream')
-        # self.server.http_server_closed.emit()
         return
 
 
 class RTMPWorker(QObject):
     stream_available = pyqtSignal(str)
-    http_server_closed = pyqtSignal()
     error = pyqtSignal(str)
 
     def __init__(self, url, args, parent=None):
         super().__init__(parent=None)
         self.conn = None
+        self.rtmp_stream = None
         self.httpd = None
         self.url = url
         self.args = args
@@ -45,26 +44,36 @@ class RTMPWorker(QObject):
         self.conn = librtmp.RTMP(self.url, live=True)
         log.debug('Initializing RTMP connection with {0}'.format(self.url))
         try:
-            log.debug('Connect...')
             self.conn.connect()
-            log.debug('Connected')
         except Exception as e:
             log.debug('Failed to initiate RTMP connection: {0}'.format(e.message))
-            self.error.emit(e.message)
+            self.error.emit(str(e))
+            return
+
+        log.debug('Creating RTMP connection stream')
+        try:
+            self.rtmp_stream = self.conn.create_stream()
+        except librtmp.exceptions.RTMPError as e:
+            log.debug('Failed to create RTMP connection stream')
+            self.error.emit(str(e))
             return
 
         log.debug('Configuring HTTP server')
         server_address = ('127.0.0.1', get_open_port())
         self.httpd = HTTPServer(server_address, RequestHandler)
-        self.httpd.rtmp_stream = self.conn.create_stream()
-        self.httpd.http_server_closed = self.http_server_closed
+        self.httpd.rtmp_stream = self.rtmp_stream
         log.debug('Starting HTTP Server')
         threading.Thread(target=self.httpd.serve_forever).start()
         self.stream_available.emit('http://{0}:{1}'.format(server_address[0], server_address[1]))
 
     def stop(self):
-        if self.conn:
+        if self.httpd:
             self.httpd.shutdown()
+            log.debug('Shut down HTTP server')
+        if self.rtmp_stream:
+            self.rtmp_stream.close()
+            log.debug('Closed RTMP connection stream')
+        if self.conn:
             self.conn.close()
             log.debug('Closed RTMP connection')
 
@@ -74,8 +83,8 @@ class RTMP(Protocol):
     version = "0.01"
     protocols = ["rtmp", "rtmpe"]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         log.debug('Using librtmp {0}'.format(librtmp.__version__))
 
     def load_url(self, url, args=None):
@@ -83,11 +92,10 @@ class RTMP(Protocol):
         self.worker_thread = QThread(self)
         self.worker = RTMPWorker(url, args)
         self.worker.stream_available.connect(self.stream_available)
-        self.worker.http_server_closed.connect(self.http_server_closed)
         self.worker.error.connect(self.error)
-        self.worker_thread.started.connect(self.worker.play_url)
-        self.worker_thread.finished.connect(lambda: log.debug('Thread finished'))
+        self.worker_thread.finished.connect(self.worker_thread_finished)
         self.worker.moveToThread(self.worker_thread)
+        self.worker_thread.started.connect(self.worker.play_url)
         self.worker_thread.start()
 
     def stream_available(self, cb_url):
@@ -100,8 +108,9 @@ class RTMP(Protocol):
         self.worker.stop()
         self.worker_thread.quit()
 
-    def http_server_closed(self):
-        self.protocol_finished.emit()
+    def worker_thread_finished(self):
+        log.debug('Worker thread finished')
+        self.deleteLater()
 
 
 __classname__ = RTMP

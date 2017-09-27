@@ -37,8 +37,13 @@ class SopCast(Protocol):
     version = "0.01"
     protocols = ["sop"]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.protocol_ready_emited = False
+        self.monitor_thread = None
+        self.worker = None
+        self.spc = None
 
         self.spsc = None
         for spsc in ["sp-sc", "sp-sc-auth", "sop"]:
@@ -46,13 +51,6 @@ class SopCast(Protocol):
             if self.spsc:
                 log.debug('Found SopCast executable at {0}'.format(self.spsc))
                 break
-
-        self.protocol_ready_emited = False
-        self.monitor_thread = QThread(self)
-        self.worker = Worker()
-        self.worker.do_work.connect(self._monitor_connection)
-        self.monitor_thread.started.connect(self.worker.startTimer)
-        self.worker.moveToThread(self.monitor_thread)
 
         if not self.spsc:
             log.error("SopCast executable not found")
@@ -80,14 +78,16 @@ class SopCast(Protocol):
         if not self.protocol_ready_emited:
             try:
                 r = requests.head('http://127.0.0.1:{0}'.format(self.outport))
-                if r.status_code != 200:
-                    raise ValueError('HTTP Server Not Ready')
-                log.debug('Ready to play, emitting signal')
-                self.protocol_ready.emit(
-                    "http://127.0.0.1:{0}".format(self.outport))
-                self.protocol_ready_emited = True
-            except Exception as e:
+            except requests.exceptions.ConnectionError as e:
                 return
+
+            if r.status_code != 200:
+                return
+
+            log.debug('Ready to play, emitting signal')
+            self.protocol_ready.emit(
+                "http://127.0.0.1:{0}".format(self.outport))
+            self.protocol_ready_emited = True
 
         errorlevel = self.spc.poll()
         if  errorlevel:
@@ -97,6 +97,13 @@ class SopCast(Protocol):
                 self.url = None
 
     def load_url(self, url, args=None):
+        self.protocol_ready_emited = False
+        self.monitor_thread = QThread(self)
+        self.worker = Worker()
+        self.worker.do_work.connect(self._monitor_connection)
+        self.monitor_thread.started.connect(self.worker.startTimer)
+        self.worker.moveToThread(self.monitor_thread)
+
         log.debug('Loading url: {0}'.format(url))
         self.url = url
         try:
@@ -127,7 +134,9 @@ class SopCast(Protocol):
                 log.debug('SopCast cannot be killed because it is already killed')
                 log.debug('What is dead may never die')
             self.spc = None
-        self.protocol_finished.emit()
+        self.worker.stopTimer()
+        self.monitor_thread.quit()
+        self.deleteLater()
 
 
 __classname__ = SopCast
