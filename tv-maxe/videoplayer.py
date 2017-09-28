@@ -1,10 +1,11 @@
 import mpv
 import logging
+import platform
 from PyQt5.QtCore import Qt, QMetaObject, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
 from PyQt5.QtGui import QKeyEvent, QCursor
 from urllib.parse import urlparse
-from enum import Enum, auto
+from enum import Enum
 
 from models.channel import Channel
 from fullscreentoolbar import FullscreenToolbar
@@ -12,11 +13,11 @@ from fullscreentoolbar import FullscreenToolbar
 log = logging.getLogger(__name__)
 
 class VideoPlayerState(Enum):
-    PLAYER_UNKNOWN = auto()
-    PLAYER_IDLE = auto()
-    PLAYER_LOADING = auto()
-    PLAYER_PLAYING = auto()
-    PLAYER_PAUSED = auto()
+    PLAYER_UNKNOWN = 0
+    PLAYER_IDLE = 1
+    PLAYER_LOADING = 2
+    PLAYER_PLAYING = 3
+    PLAYER_PAUSED = 4
 
 class VideoPlayer(QWidget):
     playback_started = pyqtSignal('PyQt_PyObject')
@@ -202,7 +203,7 @@ class VideoPlayer(QWidget):
     @pyqtSlot()
     def _mouse_move(self):
         if self.isFullScreen():
-            if event.pos().y() > self.height() - 150:
+            if QCursor.pos().y() > self.height() - 150:
                 self.fullscreen_toolbar.move(
                     self.width()/2 - self.fullscreen_toolbar.width()/2,
                     self.height() - self.fullscreen_toolbar.height()
