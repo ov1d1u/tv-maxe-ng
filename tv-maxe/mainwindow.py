@@ -32,7 +32,7 @@ class TVMaxeMainWindow(QMainWindow):
         self.video_player.playback_error.connect(self.video_playback_error)
         self.video_player.volume_changed.connect(self.video_volume_changed)
 
-        self.statusbar.hide()
+        self.statusbar.addPermanentWidget(self.bottom_bar, 1)
         self.bottom_layout.addWidget(QSizeGrip(self))
         self.splitter.setStretchFactor(1, 1)
         self.progress_bar.hide()
