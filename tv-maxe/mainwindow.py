@@ -51,10 +51,6 @@ class TVMaxeMainWindow(QMainWindow):
         self.stop_btn.setIcon(TXIcon('icons/stop-button.svg'))
         self.fullscreen_btn.setIcon(TXIcon('icons/fullscreen.svg'))
 
-        self.chlist_manager.download_chlists([
-            'http://tv-maxe.org/subscriptions/v2/Romania.db'
-        ])
-
     def load_settings(self):
         log.debug('Loading settings...')
         app = QApplication.instance()
@@ -67,6 +63,9 @@ class TVMaxeMainWindow(QMainWindow):
 
         self.splitter.setSizes(settings.value("splitterSizes", [242, self.width()-242], int))
         self.video_player.set_volume(int(settings.value("player/volume", 50)))
+
+        self.chlist_manager.download_chlists(settings.get_subscriptions())
+
         log.debug('Settings loaded')
 
     def play_btn_clicked(self, checked=False):

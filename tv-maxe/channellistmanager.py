@@ -15,8 +15,11 @@ class ChannelListManager(QObject):
     channel_added = pyqtSignal(Channel)
     channel_removed = pyqtSignal(Channel)
 
-    def download_chlists(self, urls):
-        urls = [QUrl(url) for url in urls]
+    def download_chlists(self, subscriptions):
+        urls = []
+        for subscription in subscriptions:
+            if subscription[0] == True:
+                urls.append(QUrl(subscription[1]))
         self.access_manager = QNetworkAccessManager()
         self.access_manager.finished.connect(self.handle_response)
 

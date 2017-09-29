@@ -12,10 +12,6 @@ from PyQt5.QtWidgets import (QApplication, QDialog, QFileDialog, QLayout, QListW
 from util import bytes2human
 
 log = logging.getLogger(__name__)
-DEFAULT_SUBSCRIPTIONS = [
-    [True, "http://tv-maxe.org/subscriptions/v2/Romania.db"],
-    [True, "http://tv-maxe.org/subscriptions/v2/International"]
-]
 
 class SubscriptionListItem(QListWidgetItem):
     __subscription = None
@@ -71,7 +67,7 @@ class SettingsDialog(QDialog):
         )
 
         # Subscriptions
-        for idx, subscription in enumerate(self.settings_manager.value("subscriptions", DEFAULT_SUBSCRIPTIONS, list)):
+        for idx, subscription in enumerate(self.settings_manager.get_subscriptions()):
             checkbox_item = QStandardItem()
             checkbox_item.setCheckable(True)
             checkbox_item.setCheckState(Qt.Unchecked if subscription[0] == False else Qt.Checked)
