@@ -2,9 +2,11 @@ import logging
 import platform
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QSizeGrip
 
 from channellistmanager import ChannelListManager
+from settings import SettingsDialog
 from txicon import TXIcon
 
 log = logging.getLogger(__name__)
@@ -63,15 +65,8 @@ class TVMaxeMainWindow(QMainWindow):
         except TypeError:
             pass  # do nothing for now
 
-        splitter_sizes = settings.value("splitterSizes")
-        if splitter_sizes:
-            splitter_sizes = [int(x) for x in splitter_sizes]
-            self.splitter.setSizes(splitter_sizes)
-        else:
-            self.splitter.setSizes([242, self.width()-242])
-
-        if settings.value("player/volume"):
-            self.video_player.set_volume(int(settings.value("player/volume")))
+        self.splitter.setSizes(settings.value("splitterSizes", [242, self.width()-242], int))
+        self.video_player.set_volume(int(settings.value("player/volume", 50)))
         log.debug('Settings loaded')
 
     def play_btn_clicked(self, checked=False):
@@ -133,6 +128,11 @@ class TVMaxeMainWindow(QMainWindow):
 
     def video_volume_changed(self, value):
         self.volume_slider.setValue(int(value))
+
+    @pyqtSlot()
+    def openSettings(self):
+        settings_dialog = SettingsDialog(self)
+        settings_dialog.exec()
 
     # Qt Events
 

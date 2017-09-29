@@ -57,14 +57,11 @@ class SopCast(Protocol):
             raise OSError(42, "SopCast executable not found")
 
         settings = QApplication.instance().settings_manager
-        if (settings.value("sopcast/inport")):
-            self.inport = int(settings.value("sopcast/inport"))
+        if settings.value("sopcast/staticports", False):
+            self.inport = settings.value("sopcast/inport", get_open_port())
+            self.outport = settings.value("sopcast/outport", get_open_port())
         else:
             self.inport = get_open_port()
-
-        if (settings.value("sopcast/outport")):
-            self.outport = int(settings.value("sopcast/outport"))
-        else:
             self.outport = get_open_port()
 
         log.debug('inport: {0}'.format(self.inport))
