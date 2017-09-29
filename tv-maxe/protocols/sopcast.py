@@ -18,7 +18,7 @@ class Worker(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.timer = QTimer()
-        self.timer.setInterval(500)
+        self.timer.setInterval(1000)
         self.timer.timeout.connect(self._do_work)
 
     def startTimer(self):

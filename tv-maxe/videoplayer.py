@@ -1,10 +1,11 @@
 import mpv
 import logging
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+import platform
+from PyQt5.QtCore import Qt, QMetaObject, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
 from PyQt5.QtGui import QKeyEvent, QCursor
 from urllib.parse import urlparse
-from enum import Enum, auto
+from enum import Enum
 
 from models.channel import Channel
 from fullscreentoolbar import FullscreenToolbar
@@ -12,11 +13,11 @@ from fullscreentoolbar import FullscreenToolbar
 log = logging.getLogger(__name__)
 
 class VideoPlayerState(Enum):
-    PLAYER_UNKNOWN = auto()
-    PLAYER_IDLE = auto()
-    PLAYER_LOADING = auto()
-    PLAYER_PLAYING = auto()
-    PLAYER_PAUSED = auto()
+    PLAYER_UNKNOWN = 0
+    PLAYER_IDLE = 1
+    PLAYER_LOADING = 2
+    PLAYER_PLAYING = 3
+    PLAYER_PAUSED = 4
 
 class VideoPlayer(QWidget):
     playback_started = pyqtSignal('PyQt_PyObject')
@@ -31,14 +32,15 @@ class VideoPlayer(QWidget):
         self.channel = None
         self.player = mpv.MPV()
         self.player.wid = int(self.winId())
-        self.player.input_cursor = False
         self.player.cursor_autohide = False
         self.protocol = None
+        self.fullscreen_toolbar = FullscreenToolbar(self)
+
+        self.player.register_key_binding('MOUSE_LEAVE', self.mouse_leave)
+        self.player.register_key_binding('MOUSE_MOVE', self.mouse_move)
         self.mousehide_timer = QTimer()
         self.mousehide_timer.setSingleShot(True)
         self.mousehide_timer.timeout.connect(self._hide_mouse)
-        self.fullscreen_toolbar = FullscreenToolbar(self)
-        self.setMouseTracking(True)
 
     def get_state(self):
         if self.player.idle_active == True:
@@ -147,8 +149,8 @@ class VideoPlayer(QWidget):
 
     def event_observer(self, event):
         event_id = event.get('event_id', None)
-        log.debug('Received event id: {0} data: {1}'.format(event_id, event))
         if event_id == mpv.MpvEventID.END_FILE:  # end-file
+            log.debug('Processing event id: {0} data: {1}'.format(event_id, event))
             reason = event['event']['reason']
             log.debug('- Reason: {0}'.format(reason))
             if reason == 0:  # EOF
@@ -192,6 +194,31 @@ class VideoPlayer(QWidget):
         except ValueError:
             log.warn("Failed to unregister as a mpv observer")
 
+    def mouse_leave(self, state, name):
+        QMetaObject.invokeMethod(self, '_mouse_leave', Qt.QueuedConnection)
+
+    def mouse_move(self, state, name):
+        QMetaObject.invokeMethod(self, '_mouse_move', Qt.QueuedConnection)
+
+    @pyqtSlot()
+    def _mouse_move(self):
+        if self.isFullScreen():
+            if QCursor.pos().y() > self.height() - 150:
+                self.fullscreen_toolbar.move(
+                    self.width()/2 - self.fullscreen_toolbar.width()/2,
+                    self.height() - self.fullscreen_toolbar.height()
+                )
+                self.fullscreen_toolbar.show()
+            else:
+                self.fullscreen_toolbar.hide()
+
+        self._show_mouse()
+        self.mousehide_timer.start(2000)
+
+    @pyqtSlot()
+    def _mouse_leave(self):
+        self.mousehide_timer.stop()
+
     def _hide_mouse(self):
         if self.fullscreen_toolbar.isHidden():
             QApplication.instance().setOverrideCursor(QCursor(Qt.BlankCursor))
@@ -209,22 +236,3 @@ class VideoPlayer(QWidget):
                 event.accept()
         else:
             event.ignore()
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        if self.isFullScreen():
-            if event.pos().y() > self.height() - 150:
-                self.fullscreen_toolbar.move(
-                    self.width()/2 - self.fullscreen_toolbar.width()/2,
-                    self.height() - self.fullscreen_toolbar.height()
-                )
-                self.fullscreen_toolbar.show()
-            else:
-                self.fullscreen_toolbar.hide()
-
-        self._show_mouse()
-        self.mousehide_timer.start(2000)
-
-    def leaveEvent(self, event):
-        super().leaveEvent(event)
-        self.mousehide_timer.stop()
