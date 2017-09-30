@@ -12,7 +12,7 @@ class HTTP(Protocol):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    def load_url(self, url):
+    def load_url(self, url, args=None):
         self.protocol_ready.emit(url)
 
     def stop(self):
