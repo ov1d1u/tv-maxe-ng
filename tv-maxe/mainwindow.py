@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QTabWidget, QAction, QAc
 
 from channellistmanager import ChannelListManager
 from settings import SettingsDialog
+from addchanneldialog import AddChannelDialog
 from txicon import TXIcon
 
 log = logging.getLogger(__name__)
@@ -16,7 +17,6 @@ class TVMaxeMainWindow(QMainWindow):
     def __init__(self, parent):
         super(QMainWindow, self).__init__(parent)
         uic.loadUi('ui/mainWindow.ui', self)
-
 
         self.play_btn.clicked.connect(self.play_btn_clicked)
         self.stop_btn.clicked.connect(self.stop_btn_clicked)
@@ -164,6 +164,19 @@ class TVMaxeMainWindow(QMainWindow):
     def openSettings(self):
         settings_dialog = SettingsDialog(self)
         settings_dialog.exec()
+
+    @pyqtSlot()
+    def showAddChannelDialog(self):
+        add_channel_dialog = AddChannelDialog(self)
+        add_channel_dialog.channel_saved.connect(self.custom_channel_saved)
+        add_channel_dialog.exec()
+
+    def custom_channel_saved(self, channel):
+        if channel.type == 'tv':
+            self.tv_channel_list.addChannel(channel)
+        else:
+            self.radio_channel_list.addChannel(channel)
+        self.chlist_manager.save_user_channel(channel)
 
     # Qt Events
 

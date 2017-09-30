@@ -6,10 +6,14 @@ from txicon import TXIcon
 
 class ChannelListWidget(QListWidget):
     def addChannel(self, channel):
-        channel_item = ChannelItem()
-        channel_item.channel = channel
-        if len(channel_item.channel.streamurls) != 0:
-            self.addItem(channel_item)
+        if len(channel.streamurls) != 0:
+            existing_item = self.channelItemForChannel(channel)
+            if existing_item:
+                existing_item.channel = channel
+            else:
+                channel_item = ChannelItem()
+                channel_item.channel = channel
+                self.addItem(channel_item)
 
     def showChannelList(self, chlist):
         for channel_item in self.iterAllItems():
@@ -21,6 +25,18 @@ class ChannelListWidget(QListWidget):
     def showAllChannelLists(self):
         for channel_item in self.iterAllItems():
             channel_item.setHidden(False)
+
+    def channelItemForChannel(self, channel):
+        for channel_item in self.iterAllItems():
+            if channel_item.channel == channel:
+                return channel_item
+        return None
+
+    def channelExists(self, channel):
+        for channelitem in self.iterAllItems():
+            if channelitem.channel == channel:
+                return True
+        return False
 
     def iterAllItems(self):
         for i in range(self.count()):

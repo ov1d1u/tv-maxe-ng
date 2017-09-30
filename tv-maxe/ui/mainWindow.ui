@@ -405,7 +405,7 @@
        <string>Show Channel List</string>
       </property>
      </widget>
-     <addaction name="actionAdd_Channel"/>
+     <addaction name="actionAddChannel"/>
      <addaction name="actionRefresh_channel_list"/>
      <addaction name="separator"/>
      <addaction name="menu_show_chlist"/>
@@ -446,7 +446,7 @@
     <string>&amp;Quit</string>
    </property>
   </action>
-  <action name="actionAdd_Channel">
+  <action name="actionAddChannel">
    <property name="text">
     <string>&amp;Add channel...</string>
    </property>
@@ -569,8 +569,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionAddChannel</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showAddChannelDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>421</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>openSettings()</slot>
+  <slot>showAddChannelDialog()</slot>
  </slots>
 </ui>

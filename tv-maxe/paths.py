@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
 
-home_dir = str(Path.home())
-cache_dir = os.path.join(home_dir, *['.tv-maxe-ng', 'cache'])
+HOME_DIR = str(Path.home())
+CACHE_DIR = os.path.join(HOME_DIR, *['.tv-maxe-ng', 'cache'])
+LOCAL_CHANNEL_DB = os.path.join(CACHE_DIR, 'user.db')
 
-if not os.path.exists(cache_dir):
-	os.makedirs(cache_dir)
+if not os.path.exists(CACHE_DIR):
+	os.makedirs(CACHE_DIR)

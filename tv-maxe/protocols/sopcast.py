@@ -115,7 +115,7 @@ class SopCast(Protocol):
                 stdout=subprocess.PIPE)
             self.monitor_thread.start()
         except Exception as e:
-            print(e)
+            log.debug(str(e))
             self.protocol_error.emit(url, "Cannot start SopCast executable.")
             self.spc = None
             self.url = None

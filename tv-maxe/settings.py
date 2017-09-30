@@ -147,7 +147,6 @@ class SettingsDialog(QDialog):
                     self.subs_treeview.model().appendRow([checkbox_item, text_item])
                     return
                 else:
-                    print(r.status_code)
                     raise ConnectionError("HTTP error status: {0}".format(r.status_code))
             except:
                 pass
