@@ -174,18 +174,9 @@ class VideoPlayer(QWidget):
             log.debug('Started playback')
             self.playback_started.emit(self.channel)
         else:
-            if self.player.cache_used:
-                # This is also called when playback was paused because the network cache is empty.
-                # Emit `playback_paused` only if the user paused the playback
-                cache_used = None
-                try:
-                    cache_used = int(self.player.cache_used)
-                except:
-                    pass
-
-                if cache_used != 0:
-                    log.debug('Paused playback')
-                    self.playback_paused.emit(self.channel)
+            if not self.player.paused_for_cache:
+                log.debug('Paused playback')
+                self.playback_paused.emit(self.channel)
 
     def unregister_observers(self):
         try:
