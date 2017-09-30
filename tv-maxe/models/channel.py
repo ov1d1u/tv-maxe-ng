@@ -12,3 +12,6 @@ class Channel:
         if type == 'tv':
             self.guide = row['guide']
             self.audiochannels = json.loads(row['audiochannels'])
+
+    def args(self, url):
+        return self.params.get(url, {})

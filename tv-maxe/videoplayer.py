@@ -64,7 +64,7 @@ class VideoPlayer(QWidget):
             self.protocol = protocol_class(self)
             self.protocol.protocol_ready.connect(self.protocol_ready)
             self.protocol.protocol_error.connect(self.protocol_error)
-            self.protocol.load_url(url)
+            self.protocol.load_url(url, channel.args(url))
         else:
             log.error('No suitable protocol found for {0}'.format(url))
 

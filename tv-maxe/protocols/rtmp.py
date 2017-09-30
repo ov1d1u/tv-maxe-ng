@@ -31,6 +31,9 @@ class RequestHandler(BaseHTTPRequestHandler):
 class RTMPWorker(QObject):
     stream_available = pyqtSignal(str)
     error = pyqtSignal(str)
+    ALLOWED_PARAMS = ['url', 'playpath', 'tcurl', 'app', 'pageurl', 'auth', 'connect_data',
+        'swfhash', 'swfsize', 'swfurl', 'swfvfy', 'flashver', 'subscribe', 'token',
+        'live', 'jtv', 'socks', 'start', 'stop', 'buffer', 'timeout']
 
     def __init__(self, url, args, parent=None):
         super().__init__(parent=None)
@@ -38,10 +41,14 @@ class RTMPWorker(QObject):
         self.rtmp_stream = None
         self.httpd = None
         self.url = url
-        self.args = args
+        self.params = {}
+        
+        for arg in args:
+            if arg in self.ALLOWED_PARAMS:
+                self.params[arg] = args[arg]
 
     def play_url(self):
-        self.conn = librtmp.RTMP(self.url, live=True)
+        self.conn = librtmp.RTMP(self.url, **self.params)
         log.debug('Initializing RTMP connection with {0}'.format(self.url))
         try:
             self.conn.connect()
