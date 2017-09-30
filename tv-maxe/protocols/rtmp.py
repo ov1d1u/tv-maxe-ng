@@ -46,7 +46,7 @@ class RTMPWorker(QObject):
         try:
             self.conn.connect()
         except Exception as e:
-            log.debug('Failed to initiate RTMP connection: {0}'.format(e.message))
+            log.debug('Failed to initiate RTMP connection: {0}'.format(e))
             self.error.emit(str(e))
             return
 

@@ -77,8 +77,10 @@ class VideoPlayer(QWidget):
     def protocol_error(self, url, error_message):
         log.debug('Protocol returned error, stopping playback')
         self.unregister_observers()
-        self.player.command('stop')
         self.deactivate_protocol()
+        self.player.play('')
+        self.exit_fullscreen()
+        self.playback_error.emit(self.channel)
 
     def deactivate_protocol(self):
         self.protocol.protocol_ready.disconnect()
