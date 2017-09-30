@@ -10,4 +10,4 @@ class SettingsManager(QSettings):
         super().__init__()
 
     def get_subscriptions(self):
-        return self.value("subscriptions", DEFAULT_SUBSCRIPTIONS, list)
+        return self.value("subscriptions", DEFAULT_SUBSCRIPTIONS)
