@@ -38,6 +38,7 @@ class VideoPlayer(QWidget):
 
         self.player.register_key_binding('MOUSE_LEAVE', self.mouse_leave)
         self.player.register_key_binding('MOUSE_MOVE', self.mouse_move)
+        self.player.register_key_binding('MOUSE_BTN0_DBL', self.mouse_dbclk)
         self.mousehide_timer = QTimer()
         self.mousehide_timer.setSingleShot(True)
         self.mousehide_timer.timeout.connect(self._hide_mouse)
@@ -201,6 +202,9 @@ class VideoPlayer(QWidget):
 
     def mouse_move(self, state, name):
         QMetaObject.invokeMethod(self, '_mouse_move', Qt.QueuedConnection)
+
+    def mouse_dbclk(self, state, name):
+        self.switch_fullscreen()
 
     @pyqtSlot()
     def _mouse_move(self):
