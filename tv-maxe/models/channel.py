@@ -1,9 +1,10 @@
 import json
 
 class Channel:
-    def __init__(self, row, type):
-        self.id = str(row['id'])
+    def __init__(self, row, type, origin):
         self.type = type
+        self.origin = origin
+        self.id = str(row['id'])
         self.icon = row['icon']
         self.name = str(row['name'])
         self.streamurls = json.loads(row['streamurls'])

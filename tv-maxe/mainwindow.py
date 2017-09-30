@@ -3,7 +3,7 @@ import platform
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QSizeGrip
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QTabWidget, QAction, QActionGroup)
 
 from channellistmanager import ChannelListManager
 from settings import SettingsDialog
@@ -16,8 +16,6 @@ class TVMaxeMainWindow(QMainWindow):
         super(QMainWindow, self).__init__(parent)
         uic.loadUi('ui/mainWindow.ui', self)
 
-        self.chlist_manager = ChannelListManager()
-        self.chlist_manager.channel_added.connect(self.channel_added)
 
         self.play_btn.clicked.connect(self.play_btn_clicked)
         self.stop_btn.clicked.connect(self.stop_btn_clicked)
@@ -32,12 +30,23 @@ class TVMaxeMainWindow(QMainWindow):
         self.video_player.playback_error.connect(self.video_playback_error)
         self.video_player.volume_changed.connect(self.video_volume_changed)
 
+        self.chlist_manager = ChannelListManager()
+        self.chlist_manager.channel_added.connect(self.channel_added)
+        self.chlist_manager.channellist_available.connect(self.channel_list_available)
+
         self.statusbar.addPermanentWidget(self.bottom_bar, 1)
-        self.bottom_layout.addWidget(QSizeGrip(self))
         self.splitter.setStretchFactor(1, 1)
         self.progress_bar.hide()
         self.progress_label.setText(self.tr("Idle"))
         self.video_player.set_volume(self.volume_slider.value())
+
+        self.channellist_show_actiongroup = QActionGroup(self)
+        self.channellist_show_actiongroup.triggered.connect(self.show_channel_list)
+        chlist_showall_action = QAction(self.tr("All"), self.menu_show_chlist)
+        chlist_showall_action.setCheckable(True)
+        chlist_showall_action.setChecked(True)
+        chlist_showall_action.setActionGroup(self.channellist_show_actiongroup)
+        self.menu_show_chlist.addAction(chlist_showall_action)
 
         os_type = platform.system()
         log.info('Detected OS type: {0}'.format(os_type))
@@ -89,6 +98,28 @@ class TVMaxeMainWindow(QMainWindow):
 
     def activated_channel_item(self, channelitem):
         self.play_channel(channelitem.channel)
+
+    def channel_list_available(self, chlist):
+        if len(self.menu_show_chlist.actions()) == 1:
+            self.menu_show_chlist.addSeparator()
+
+        for action in self.menu_show_chlist.actions():
+            if isinstance(action, ChannelListShowAction):
+                if action.channel_list == chlist:
+                    return  # We already have this channel list in menu
+
+        chlist_action = ChannelListShowAction(self.menu_show_chlist, chlist)
+        chlist_action.setActionGroup(self.channellist_show_actiongroup)
+        self.menu_show_chlist.addAction(chlist_action)
+
+    def show_channel_list(self):
+        action = self.channellist_show_actiongroup.checkedAction()
+        if isinstance(action, ChannelListShowAction):
+            self.tv_channel_list.showChannelList(action.channel_list)
+            self.radio_channel_list.showChannelList(action.channel_list)
+        else:
+            self.tv_channel_list.showAllChannelLists()
+            self.radio_channel_list.showAllChannelLists()
 
     def channel_added(self, channel):
         if channel.type == 'tv':
@@ -144,3 +175,12 @@ class TVMaxeMainWindow(QMainWindow):
         settings.setValue("windowState", self.saveState())
         settings.setValue("splitterSizes", self.splitter.sizes())
         settings.setValue("player/volume", self.volume_slider.value())
+
+
+class ChannelListShowAction(QAction):
+    def __init__(self, parent=None, channel_list=None):
+        super().__init__(parent)
+
+        self.channel_list = channel_list
+        self.setText(self.channel_list.name)
+        self.setCheckable(True)

@@ -2,7 +2,7 @@ from PyQt5.QtCore import QSettings
 
 DEFAULT_SUBSCRIPTIONS = [
     [True, "http://tv-maxe.org/subscriptions/v2/Romania.db"],
-    [True, "http://tv-maxe.org/subscriptions/v2/International"]
+    [True, "http://tv-maxe.org/subscriptions/v2/International.db"]
 ]
 
 class SettingsManager(QSettings):
