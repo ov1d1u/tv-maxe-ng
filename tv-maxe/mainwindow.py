@@ -3,7 +3,8 @@ import platform
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QTabWidget, QAction, QActionGroup)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QTabWidget, QAction, QActionGroup,
+    QMenu)
 
 from channellistmanager import ChannelListManager
 from settings import SettingsDialog
@@ -175,6 +176,8 @@ class TVMaxeMainWindow(QMainWindow):
         settings.setValue("windowState", self.saveState())
         settings.setValue("splitterSizes", self.splitter.sizes())
         settings.setValue("player/volume", self.volume_slider.value())
+
+        super().closeEvent(event)
 
 
 class ChannelListShowAction(QAction):

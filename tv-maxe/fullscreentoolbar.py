@@ -77,4 +77,5 @@ class FullscreenToolbar(QWidget):
     # Qt Events
 
     def keyPressEvent(self, event):
+        super().keyPressEvent(event)
         self.parent().keyPressEvent(event)

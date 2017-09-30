@@ -69,6 +69,9 @@
          <height>0</height>
         </size>
        </property>
+       <property name="contextMenuPolicy">
+        <enum>Qt::ActionsContextMenu</enum>
+       </property>
        <property name="tabPosition">
         <enum>QTabWidget::West</enum>
        </property>
@@ -98,7 +101,7 @@
          <item>
           <widget class="ChannelListWidget" name="tv_channel_list">
            <property name="contextMenuPolicy">
-            <enum>Qt::CustomContextMenu</enum>
+            <enum>Qt::DefaultContextMenu</enum>
            </property>
            <property name="sortingEnabled">
             <bool>true</bool>
@@ -129,6 +132,9 @@
          </property>
          <item>
           <widget class="ChannelListWidget" name="radio_channel_list">
+           <property name="contextMenuPolicy">
+            <enum>Qt::DefaultContextMenu</enum>
+           </property>
            <property name="sortingEnabled">
             <bool>true</bool>
            </property>

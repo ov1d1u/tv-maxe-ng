@@ -1,7 +1,10 @@
-from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QListWidget, QMenu
+from PyQt5.QtCore import Qt, pyqtSignal
 from channelitem import ChannelItem
 
-class ChannelListWidget(QtWidgets.QListWidget):
+from txicon import TXIcon
+
+class ChannelListWidget(QListWidget):
     def addChannel(self, channel):
         channel_item = ChannelItem()
         channel_item.channel = channel
@@ -22,3 +25,18 @@ class ChannelListWidget(QtWidgets.QListWidget):
     def iterAllItems(self):
         for i in range(self.count()):
             yield self.item(i)
+
+    # Events
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        play_action = menu.addAction(TXIcon('icons/play-button.svg'), self.tr("Play"))
+        record_action = menu.addAction(TXIcon('icons/record-button.svg'), self.tr("Record"))
+        menu.addSeparator()
+        info_action = menu.addAction(TXIcon('icons/information.svg'), self.tr("Channel info"))
+        epg_action = menu.addAction(TXIcon('icons/calendar-icon.svg'), self.tr("EPG"))
+        menu.addSeparator()
+        delete_action = menu.addAction(TXIcon('icons/empty-container.svg'), self.tr("Remove channel"))
+        action = menu.exec_(self.mapToGlobal(event.pos()))
+        if action == play_action:
+            self.itemActivated.emit(self.currentItem())
