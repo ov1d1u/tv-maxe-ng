@@ -15,7 +15,7 @@ class ChannelListManager(QObject):
     channellist_available = pyqtSignal(ChannelList)
     channel_added = pyqtSignal(Channel)
     channel_removed = pyqtSignal(Channel)
-    user_list = None
+    user_channellist = None
 
     def load_user_chlist(self):
         if os.path.isfile(paths.LOCAL_CHANNEL_DB):
@@ -23,11 +23,11 @@ class ChannelListManager(QObject):
             data = fh.read()
             fh.close()
 
-            self.user_list = ChannelList(data)
-            self.load_chlist(self.user_list)
+            ChannelListManager.user_channellist = ChannelList(data)
+            self.load_chlist(ChannelListManager.user_channellist)
         else:
-            self.user_list = ChannelList.create_user_db()
-        self.channellist_available.emit(self.user_list)
+            ChannelListManager.user_channellist = ChannelList.create_user_db()
+        self.channellist_available.emit(ChannelListManager.user_channellist)
 
     def load_cached_chlists(self, subscriptions):
         for subscription in subscriptions:
@@ -91,4 +91,4 @@ class ChannelListManager(QObject):
             self.channel_added.emit(channel)
 
     def save_user_channel(self, channel):
-        self.user_list.save_channel(channel)
+        ChannelListManager.user_channellist.save_channel(channel)

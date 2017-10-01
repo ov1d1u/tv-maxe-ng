@@ -161,6 +161,15 @@ class TVMaxeMainWindow(QMainWindow):
         self.volume_slider.setValue(int(value))
 
     @pyqtSlot()
+    def showDeletedChannels(self):
+        if self.action_show_deleted.isChecked():
+            self.tv_channel_list.show_deleted = True
+            self.radio_channel_list.show_deleted = True
+        else:
+            self.tv_channel_list.show_deleted = False
+            self.radio_channel_list.show_deleted = False
+
+    @pyqtSlot()
     def openSettings(self):
         settings_dialog = SettingsDialog(self)
         settings_dialog.exec()

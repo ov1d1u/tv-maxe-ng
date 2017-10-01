@@ -13,6 +13,7 @@ class Channel:
         self.params = json.loads(row.get("params", "{}"))
         self.guide = row.get("guide", "")
         self.audiochannels = json.loads(row.get("audiochannels", "[]"))
+        self.deleted = bool(row.get("deleted", False))
 
     def args(self, url):
         return self.params.get(url, {})
@@ -25,7 +26,8 @@ class Channel:
             "streamurls": json.dumps(self.streamurls),
             "params": json.dumps(self.params),
             "guide": self.guide,
-            "audiochannels": json.dumps(self.audiochannels)
+            "audiochannels": json.dumps(self.audiochannels),
+            "deleted": self.deleted
         }
 
     def __eq__(self, obj):

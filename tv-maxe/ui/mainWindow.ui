@@ -409,7 +409,7 @@
      <addaction name="actionRefresh_channel_list"/>
      <addaction name="separator"/>
      <addaction name="menu_show_chlist"/>
-     <addaction name="actionShow_Deleted_Channels"/>
+     <addaction name="action_show_deleted"/>
     </widget>
     <addaction name="menuList"/>
     <addaction name="action_settings"/>
@@ -456,7 +456,7 @@
     <string>&amp;Refresh</string>
    </property>
   </action>
-  <action name="actionShow_Deleted_Channels">
+  <action name="action_show_deleted">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -585,9 +585,26 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_show_deleted</sender>
+   <signal>changed()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showDeletedChannels()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>421</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>openSettings()</slot>
   <slot>showAddChannelDialog()</slot>
+  <slot>showDeletedChannels()</slot>
  </slots>
 </ui>

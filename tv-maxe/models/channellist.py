@@ -22,8 +22,8 @@ class ChannelList:
         conn = sqlite3.connect(paths.LOCAL_CHANNEL_DB)
         c = conn.cursor()
         c.execute("CREATE TABLE info (name text, version text, author text, url text, epgurl text)")
-        c.execute("CREATE TABLE radio_channels (id text, icon blob, name text, streamurls text, params text)")
-        c.execute("CREATE TABLE tv_channels (id text, icon blob, name text, streamurls text, params text, guide text, audiochannels text)")
+        c.execute("CREATE TABLE radio_channels (id text, icon blob, name text, streamurls text, params text, deleted bool)")
+        c.execute("CREATE TABLE tv_channels (id text, icon blob, name text, streamurls text, params text, guide text, audiochannels text, deleted bool)")
 
         c.execute(
             "INSERT INTO info (name, version, author, url, epgurl) VALUES (?, ?, ?, ?, ?)",
@@ -103,15 +103,26 @@ class ChannelList:
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         if channel.type == 'tv':
-            c.execute("""INSERT INTO tv_channels (id, icon, name, streamurls, params, guide, audiochannels)
-                            VALUES (:id, :icon, :name, :streamurls, :params, :guide, :audiochannels)""",
+            c.execute("""INSERT INTO tv_channels (id, icon, name, streamurls, params, guide, audiochannels, deleted)
+                            VALUES (:id, :icon, :name, :streamurls, :params, :guide, :audiochannels, :deleted)""",
                             channel.to_dict()
             )
         else:
-            c.execute("""INSERT INTO radio_channels (id, icon, name, streamurls, params)
-                            VALUES (:id, :icon, :name, :streamurls, :params)""",
+            c.execute("""INSERT INTO radio_channels (id, icon, name, streamurls, params, deleted)
+                            VALUES (:id, :icon, :name, :streamurls, :params, :deleted)""",
                             channel.to_dict()
             )
+        conn.commit()
+        conn.close()
+
+    def remove_channel(self, channel):
+        conn = sqlite3.connect(self.cached_path)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        if channel.type == 'tv':
+            c.execute("DELETE FROM tv_channels WHERE id=?", (channel.id, ))
+        else:
+            c.execute("DELETE FROM radio_channels WHERE id=?", (channel.id, ))
         conn.commit()
         conn.close()
 
