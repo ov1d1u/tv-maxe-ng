@@ -402,11 +402,11 @@
      </property>
      <widget class="QMenu" name="menu_show_chlist">
       <property name="title">
-       <string>Show Channel List</string>
+       <string>Show &amp;Channel List</string>
       </property>
      </widget>
      <addaction name="actionAddChannel"/>
-     <addaction name="actionRefresh_channel_list"/>
+     <addaction name="action_refresh_channellist"/>
      <addaction name="separator"/>
      <addaction name="menu_show_chlist"/>
      <addaction name="action_show_deleted"/>
@@ -451,7 +451,7 @@
     <string>&amp;Add channel...</string>
    </property>
   </action>
-  <action name="actionRefresh_channel_list">
+  <action name="action_refresh_channellist">
    <property name="text">
     <string>&amp;Refresh</string>
    </property>
@@ -601,10 +601,27 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_refresh_channellist</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>reloadChannelList()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>421</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>openSettings()</slot>
   <slot>showAddChannelDialog()</slot>
   <slot>showDeletedChannels()</slot>
+  <slot>reloadChannelList()</slot>
  </slots>
 </ui>

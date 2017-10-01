@@ -161,6 +161,14 @@ class TVMaxeMainWindow(QMainWindow):
         self.volume_slider.setValue(int(value))
 
     @pyqtSlot()
+    def reloadChannelList(self):
+        self.tv_channel_list.clear()
+        self.radio_channel_list.clear()
+        subscriptions = QApplication.instance().settings_manager.get_subscriptions()
+        self.chlist_manager.clear_cached_chlists(subscriptions)
+        self.chlist_manager.download_chlists(subscriptions)
+
+    @pyqtSlot()
     def showDeletedChannels(self):
         if self.action_show_deleted.isChecked():
             self.tv_channel_list.show_deleted = True

@@ -48,6 +48,12 @@ class ChannelListManager(QObject):
                             e
                         ))
 
+    def clear_cached_chlists(self, subscriptions):
+        for subscription in subscriptions:
+            cached_path = ChannelList.local_filename_for_url(subscription[1])
+            if os.path.isfile(cached_path):
+                os.remove(cached_path)
+
     def download_chlists(self, subscriptions):
         self.load_user_chlist()
         self.load_cached_chlists(subscriptions)
