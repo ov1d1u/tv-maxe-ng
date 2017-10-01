@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QListWidget, QMenu
+from PyQt5.QtWidgets import QListWidget, QMenu, QApplication
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 from channelitem import ChannelItem
@@ -7,10 +7,13 @@ from channellistmanager import ChannelListManager
 from txicon import TXIcon
 
 class ChannelListWidget(QListWidget):
+    deleted_channels = QApplication.instance().settings_manager.value("channels/deleted", []) or []  # https://riverbankcomputing.com/pipermail/pyqt/2011-September/030480.html
     _show_deleted = False
+    _chlist_filter = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        QApplication.instance().aboutToQuit.connect(self.aboutToQuit)
 
     @property
     def show_deleted(self):
@@ -19,9 +22,11 @@ class ChannelListWidget(QListWidget):
     @show_deleted.setter
     def show_deleted(self, show_deleted):
         self._show_deleted = show_deleted
+        self.refresh()
+    
+    def refresh(self):
         for item in self.iterAllItems():
-            if item.channel.deleted:
-                self.processDeletedChannelItem(item)
+            self.setChannelItemVisibility(item)
 
     def addChannel(self, channel):
         if len(channel.streamurls) != 0:
@@ -30,23 +35,15 @@ class ChannelListWidget(QListWidget):
                 channel_item = ChannelItem()
                 channel_item.channel = channel
                 self.addItem(channel_item)
-                if channel.deleted:
-                    self.processDeletedChannelItem(channel_item)
+                self.setChannelItemVisibility(channel_item)
                 
     def showChannelList(self, chlist):
-        for channel_item in self.iterAllItems():
-            if channel_item.channel.origin == chlist.origin_url:
-                if channel_item.channel.deleted:
-                    self.processDeletedChannelItem(channel_item)
-                else:
-                    channel_item.setHidden(False)
-            else:
-                channel_item.setHidden(True)
+        self._chlist_filter = chlist
+        self.refresh()
 
     def showAllChannelLists(self):
-        for channel_item in self.iterAllItems():
-            if not channel_item.channel.deleted:
-                self.processDeletedChannelItem(channel_item)
+        self._chlist_filter = None
+        self.refresh()
 
     def channelItemForChannel(self, channel):
         for channel_item in self.iterAllItems():
@@ -65,26 +62,24 @@ class ChannelListWidget(QListWidget):
             yield self.item(i)
 
     def deleteChannel(self, channel):
-        if not ChannelListManager.user_channellist:
-            ChannelListManager().load_user_chlist()
-
-        channel.deleted = True
-        ChannelListManager.user_channellist.save_channel(channel)
-        self.processDeletedChannelItem(self.channelItemForChannel(channel))
+        ChannelListWidget.deleted_channels.append(channel.id)
+        self.setChannelItemVisibility(self.channelItemForChannel(channel))
 
     def undeleteChannel(self, channel):
-        if not ChannelListManager.user_channellist:
-            ChannelListManager().load_user_chlist()
+        ChannelListWidget.deleted_channels.remove(channel.id)
+        channel_item = self.channelItemForChannel(channel)
+        brush = ChannelItem().foreground()
+        channel_item.setForeground(brush)
+        channel_item.setHidden(False)
+        self.setChannelItemVisibility(self.channelItemForChannel(channel))
 
-        # Don't worry, this just remove our copy of the channel from user db
-        ChannelListManager.user_channellist.remove_channel(channel)
-        channel.deleted = False
-        self.processDeletedChannelItem(self.channelItemForChannel(channel))
-
-    def processDeletedChannelItem(self, channel_item):
-        if channel_item.channel.deleted:
+    def setChannelItemVisibility(self, channel_item):
+        if channel_item.channel.id in ChannelListWidget.deleted_channels:
             if self.show_deleted:
-                channel_item.setHidden(False)
+                if self._chlist_filter:
+                    channel_item.setHidden(channel_item.channel.origin != self._chlist_filter.origin_url)
+                else:
+                    channel_item.setHidden(False)
                 brush = channel_item.foreground()
                 color = brush.color()
                 color.setRed(255)
@@ -93,11 +88,16 @@ class ChannelListWidget(QListWidget):
             else:
                 channel_item.setHidden(True)
         else:
-            brush = ChannelItem().foreground()
-            channel_item.setForeground(brush)
+            if self._chlist_filter:
+                channel_item.setHidden(channel_item.channel.origin != self._chlist_filter.origin_url)
+            else:
+                channel_item.setHidden(False)
+
+    def aboutToQuit(self):
+        QApplication.instance().settings_manager.setValue("channels/deleted", ChannelListWidget.deleted_channels)
+        QApplication.instance().settings_manager.sync()
 
     # Events
-
     def contextMenuEvent(self, event):
         current_item = self.currentItem()
 
@@ -108,11 +108,12 @@ class ChannelListWidget(QListWidget):
         info_action = menu.addAction(TXIcon('icons/information.svg'), self.tr("Channel info"))
         epg_action = menu.addAction(TXIcon('icons/calendar-icon.svg'), self.tr("EPG"))
         menu.addSeparator()
-        delete_action = undelete_action = None
-        if current_item.channel.deleted:
-            undelete_action = menu.addAction(TXIcon('icons/untrash.svg'), self.tr("Undelete channel"))
+        delete_action = menu.addAction(TXIcon('icons/trash.svg'), self.tr("Delete channel"))
+        undelete_action = menu.addAction(TXIcon('icons/untrash.svg'), self.tr("Undelete channel"))
+        if current_item.channel.id not in self.deleted_channels:
+            undelete_action.setVisible(False)
         else:
-            delete_action = menu.addAction(TXIcon('icons/trash.svg'), self.tr("Delete channel"))
+            delete_action.setVisible(False)
         action = menu.exec_(self.mapToGlobal(event.pos()))
 
         if action == play_action:
