@@ -15,6 +15,8 @@ class ChannelListManager(QObject):
     channellist_available = pyqtSignal(ChannelList)
     channel_added = pyqtSignal(Channel)
     channel_removed = pyqtSignal(Channel)
+
+    channellists = set()
     user_channellist = None
 
     def load_user_chlist(self):
@@ -27,6 +29,7 @@ class ChannelListManager(QObject):
             self.load_chlist(ChannelListManager.user_channellist)
         else:
             ChannelListManager.user_channellist = ChannelList.create_user_db()
+        ChannelListManager.channellists.add(ChannelListManager.user_channellist)
         self.channellist_available.emit(ChannelListManager.user_channellist)
 
     def load_cached_chlists(self, subscriptions):
@@ -41,6 +44,7 @@ class ChannelListManager(QObject):
                     chlist = ChannelList(data, subscription[1])
                     try:
                         self.load_chlist(chlist)
+                        ChannelListManager.channellists.add(chlist)
                         self.channellist_available.emit(chlist)
                     except Exception as e:
                         log.error('Failed to process cached database at {0}: {1}'.format(
@@ -80,6 +84,7 @@ class ChannelListManager(QObject):
 
             try:
                 self.load_chlist(chlist)
+                ChannelListManager.channellists.add(chlist)
                 self.channellist_available.emit(chlist)
             except Exception as e:
                 log.error('Failed to process `{0}` ({1}): {2}'.format(

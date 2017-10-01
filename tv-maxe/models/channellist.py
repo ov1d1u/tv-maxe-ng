@@ -10,6 +10,19 @@ from models.channel import Channel
 log = logging.getLogger(__name__)
 
 class ChannelList:
+    def __init__(self, data, origin_url=None):
+        self.data = data
+        self.origin_url = origin_url
+        if origin_url:
+            self.cached_path = ChannelList.local_filename_for_url(origin_url)
+
+            log.debug('Caching channel list "{0}" to: {1}'.format(origin_url, self.cached_path))
+            fh = open(self.cached_path, 'wb')
+            fh.write(self.data)
+            fh.close()
+        else:
+            self.cached_path = self.origin_url = paths.LOCAL_CHANNEL_DB
+
     @staticmethod
     def local_filename_for_url(origin_url):
         return os.path.join(
@@ -37,19 +50,6 @@ class ChannelList:
         data = fh.read()
         fh.close()
         return ChannelList(data)
-
-    def __init__(self, data, origin_url=None):
-        self.data = data
-        self.origin_url = origin_url
-        if origin_url:
-            self.cached_path = ChannelList.local_filename_for_url(origin_url)
-
-            log.debug('Caching channel list "{0}" to: {1}'.format(origin_url, self.cached_path))
-            fh = open(self.cached_path, 'wb')
-            fh.write(self.data)
-            fh.close()
-        else:
-            self.cached_path = self.origin_url = paths.LOCAL_CHANNEL_DB
 
     @property
     def name(self):
@@ -130,3 +130,6 @@ class ChannelList:
         if isinstance(obj, ChannelList):
             return obj.origin_url == self.origin_url
         return False
+
+    def __hash__(self):
+        return hash(self.origin_url)

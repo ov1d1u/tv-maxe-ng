@@ -28,6 +28,9 @@ class Channel:
             "audiochannels": json.dumps(self.audiochannels)
         }
 
+    def __hash__(self):
+        return hash(self.id)
+
     def __eq__(self, obj):
         if isinstance(obj, Channel):
             return self.id == obj.id

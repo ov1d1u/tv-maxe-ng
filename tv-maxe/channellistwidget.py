@@ -4,6 +4,7 @@ from PyQt5.QtGui import QBrush, QColor
 from channelitem import ChannelItem
 
 from channellistmanager import ChannelListManager
+from channelinfo import ChannelInfoDialog
 from txicon import TXIcon
 
 class ChannelListWidget(QListWidget):
@@ -32,10 +33,11 @@ class ChannelListWidget(QListWidget):
         if len(channel.streamurls) != 0:
             existing_item = self.channelItemForChannel(channel)
             if not existing_item:
-                channel_item = ChannelItem()
-                channel_item.channel = channel
+                channel_item = ChannelItem(channel)
                 self.addItem(channel_item)
                 self.setChannelItemVisibility(channel_item)
+            else:
+                existing_item.channel = channel
                 
     def showChannelList(self, chlist):
         self._chlist_filter = chlist
@@ -68,10 +70,14 @@ class ChannelListWidget(QListWidget):
     def undeleteChannel(self, channel):
         ChannelListWidget.deleted_channels.remove(channel.id)
         channel_item = self.channelItemForChannel(channel)
-        brush = ChannelItem().foreground()
+        brush = ChannelItem(None).foreground()
         channel_item.setForeground(brush)
         channel_item.setHidden(False)
         self.setChannelItemVisibility(self.channelItemForChannel(channel))
+
+    def showChannelInfo(self, channel):
+        channel_info_dialog = ChannelInfoDialog(channel, self.window())
+        channel_info_dialog.exec()
 
     def setChannelItemVisibility(self, channel_item):
         if channel_item.channel.id in ChannelListWidget.deleted_channels:
@@ -122,3 +128,5 @@ class ChannelListWidget(QListWidget):
             self.deleteChannel(current_item.channel)
         elif action == undelete_action:
             self.undeleteChannel(current_item.channel)
+        elif action == info_action:
+            self.showChannelInfo(current_item.channel)
