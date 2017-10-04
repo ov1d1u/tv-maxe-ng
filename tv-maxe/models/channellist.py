@@ -63,6 +63,17 @@ class ChannelList:
         return row['name']
 
     @property
+    def epg_url(self):
+        conn = sqlite3.connect(self.cached_path)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+
+        c.execute("SELECT * FROM info")
+        row = c.fetchone()
+        conn.close()
+        return row['epgurl']
+
+    @property
     def tv_channels(self):
         channels = []
 

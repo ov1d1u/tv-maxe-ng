@@ -17,3 +17,18 @@ def bytes2human(n):
             value = float(n) / prefix[s]
             return '%.1f%s' % (value, s)
     return "%sB" % n
+
+def toLocalTime(hhmm):
+    import time, datetime
+    diff = time.timezone
+    diff = -diff
+    now = datetime.datetime.strptime(hhmm, "%H:%M")
+    delta = datetime.timedelta(seconds=diff)
+    newtime = now + delta
+    h = str(newtime.hour)
+    m = str(newtime.minute)
+    if len(h) == 1:
+        h = '0' + h
+    if len(m) == 1:
+        m = '0' + m
+    return h + ':' + m

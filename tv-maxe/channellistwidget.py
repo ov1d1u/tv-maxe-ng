@@ -5,6 +5,7 @@ from channelitem import ChannelItem
 
 from channellistmanager import ChannelListManager
 from channelinfo import ChannelInfoDialog
+from epg import EPGDialog
 from txicon import TXIcon
 
 class ChannelListWidget(QListWidget):
@@ -79,6 +80,10 @@ class ChannelListWidget(QListWidget):
         channel_info_dialog = ChannelInfoDialog(channel, self.window())
         channel_info_dialog.exec()
 
+    def showChannelEPG(self, channel):
+        channel_epg_dialog = EPGDialog(channel, self.window())
+        channel_epg_dialog.exec()
+
     def setChannelItemVisibility(self, channel_item):
         if channel_item.channel.id in ChannelListWidget.deleted_channels:
             if self.show_deleted:
@@ -130,3 +135,5 @@ class ChannelListWidget(QListWidget):
             self.undeleteChannel(current_item.channel)
         elif action == info_action:
             self.showChannelInfo(current_item.channel)
+        elif action == epg_action:
+            self.showChannelEPG(current_item.channel)
