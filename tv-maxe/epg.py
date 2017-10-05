@@ -3,11 +3,12 @@ import logging
 import json
 import os
 import sqlite3
+import itertools
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QAbstractItemView, QMessageBox
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from PyQt5.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem
-from PyQt5.QtCore import QUrl, Qt
+from PyQt5.QtCore import QUrl, Qt, QObject, QItemSelectionModel, pyqtSignal
 
 import paths
 from util import toLocalTime
@@ -19,6 +20,8 @@ class EPGDialog(QDialog):
     def __init__(self, channel, parent=None):
         super(QDialog, self).__init__(parent)
         uic.loadUi('ui/epg.ui', self)
+
+        self.channel = channel
 
         self.setWindowTitle(self.tr("TV Guide for {0}").format(channel.name))
         self.channel_name_label.setText(channel.name)
@@ -47,12 +50,6 @@ class EPGDialog(QDialog):
         self.progress_bar.setMaximum(0)
         self.progress_bar.hide()
 
-        self.channel = channel
-        self.origin_chlist = None
-        for chlist in ChannelListManager.channellists:
-            if chlist.origin_url == channel.origin:
-                self.origin_chlist = chlist
-
         start_date = datetime.datetime.today()
         for day in (start_date + datetime.timedelta(n) for n in range(7)):
             combobox_model.appendRow(
@@ -63,68 +60,100 @@ class EPGDialog(QDialog):
         self.day_activated(0)
 
     def day_activated(self, index):
+        self.progress_bar.show()
         self.epg_treeview.setHeaderHidden(True)
         self.epg_treeview.model().clear()
+
+        self.epg_retriever = EPGRetriever(self.channel, self.days_combobox.model().item(index, 0).text())
+        self.epg_retriever.epg_data_available.connect(self.display_epg)
+        self.epg_retriever.epg_data_error.connect(self.epg_data_error)
+        self.epg_retriever.retrieve_epg()
+
+    def display_epg(self, epg_list):
+        self.progress_bar.hide()
+        hours = [toLocalTime(x[0]) for x in epg_list]
+        now = datetime.datetime.strptime(datetime.datetime.now().strftime("%H:%M"), "%H:%M")
+        current = [x for x in itertools.takewhile(lambda t: now >= datetime.datetime.strptime(t, "%H:%M"), hours)][-1]
+
+        for idx, epg_line in enumerate(epg_list):
+            row = [
+                QStandardItem(toLocalTime(epg_line[0])), QStandardItem(epg_line[1])
+            ]
+            self.epg_treeview.model().appendRow(row)
+            if toLocalTime(epg_line[0]) == current and \
+              self.days_combobox.model().item(self.days_combobox.currentIndex(), 0).text() == datetime.datetime.now().strftime("%Y-%m-%d"):
+                selection = self.epg_treeview.selectionModel()
+                selection.select(self.epg_treeview.model().index(idx, 0), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+
+        self.epg_treeview.model().setHorizontalHeaderLabels(['Time', 'Show'])
+        self.epg_treeview.setHeaderHidden(False)
+        self.epg_treeview.resizeColumnToContents(0)
+
+    def epg_data_error(self, error_msg):
+        self.progress_bar.hide()
+        QMessageBox.critical(
+            self,
+            self.tr("EPG Error"),
+            error_msg
+        )
+
+
+class EPGRetriever(QObject):
+    epg_data_available = pyqtSignal(list)
+    epg_data_error = pyqtSignal(str)
+
+    def __init__(self, channel, date_str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.channel = channel
+        self.date_str = date_str
+
+        self.origin_chlist = None
+        for chlist in ChannelListManager.channellists:
+            if chlist.origin_url == channel.origin:
+                self.origin_chlist = chlist
+                break
+
+        self.access_manager = QNetworkAccessManager(self)
+        self.access_manager.finished.connect(self.handle_response)
+
+    def retrieve_epg(self):
         if self.origin_chlist:
-            datestring = self.days_combobox.model().item(index, 0).text()
             url = "{0}?action=getGuide&channel={1}&date={2}".format(
                 self.origin_chlist.epg_url,
                 self.channel.id,
-                datestring
+                self.date_str
             )            
 
-            cached_json = self.epg_from_cache(self.channel.id, datestring)
+            cached_json = self.epg_from_cache(self.channel.id, self.date_str)
             if cached_json:
-                log.debug("Found EPG in cache for {0}".format(datestring))
+                log.debug("Found EPG in cache for {0}".format(self.date_str))
                 self.process_data(cached_json)
             else:
                 log.debug('Retrieving EPG data from {0}'.format(url))
-
-                if self.access_manager:
-                    self.access_manager.finished.disconnect()
-                    self.access_manager = None
-
                 request = QNetworkRequest(QUrl(url))
-                self.access_manager = QNetworkAccessManager()
-                self.access_manager.finished.connect(self.handle_response)
                 self.access_manager.get(request)
-                self.progress_bar.show()
 
     def handle_response(self, response):
-        self.progress_bar.hide()
         if response.error() == QNetworkReply.NoError:
             log.debug('Retrieved EPG for {0}'.format(self.channel.name))
             json_data = bytes(response.readAll())
-            self.cache_epg(self.channel.id, self.days_combobox.model().item(self.days_combobox.currentIndex(), 0).text(), json_data)
+            self.cache_epg(self.channel.id, self.date_str, json_data)
             self.process_data(json_data)
         elif response.error() == QNetworkReply.ContentNotFoundError:
-            QMessageBox.critical(
-                self,
-                self.tr("Could not load EPG data"),
-                self.tr("EPG data is not available for this channel.")
-            )
-    
+            self.epg_data_error.emit("EPG data is not available for this channel.")
+        else:
+            self.epg_data_error.emit(response.errorString())
+
     def process_data(self, json_data):
         try:
             epg_list = json.loads(json_data)
         except json.decoder.JSONDecodeError:
             log.error("Error while decoding JSON data")
-            QMessageBox.critical(
-                self,
-                self.tr("Could not load EPG data"),
-                self.tr("EPG data format is invalid.")
-            )
+            self.epg_data_error.emit("EPG data format is invalid.")
             return
 
-        for epg_line in epg_list:
-            row = [
-                QStandardItem(toLocalTime(epg_line[0])), QStandardItem(epg_line[1])
-            ]
-            self.epg_treeview.model().appendRow(row)
-
-        self.epg_treeview.model().setHorizontalHeaderLabels(['Time', 'Show'])
-        self.epg_treeview.setHeaderHidden(False)
-        self.epg_treeview.resizeColumnToContents(0)
+        self.epg_data_available.emit(epg_list)
 
     def cache_epg(self, channel_id, date_str, json_data):
         if not os.path.exists(paths.EPG_CACHE):
