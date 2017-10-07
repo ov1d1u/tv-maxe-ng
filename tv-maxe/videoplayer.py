@@ -52,16 +52,17 @@ class VideoPlayer(QWidget):
             return VideoPlayerState.PLAYER_PLAYING
         return VideoPlayerState.PLAYER_UNKNOWN
 
-    def play_channel(self, channel):
-        log.debug('Playing channel {0}'.format(channel.id))
-        self.channel = channel
-        app = QApplication.instance()
-        url = self.channel.streamurls[0]
+    def play_channel(self, channel, play_index):
+        log.debug('Playing channel: {0}'.format(channel.id))
+        self.channel = Channel(channel.to_dict())
+        self.channel.play_index = play_index
+        url = self.channel.streamurls[play_index]
         log.debug('Selected url: {0}'.format(url))
         url_components = urlparse(url)
+        app = QApplication.instance()
         if app.protocol_plugins.get(url_components.scheme, None):
             protocol_class = app.protocol_plugins[url_components.scheme]
-            log.debug('Using {0} to process {1}'.format(protocol_class, url))
+            log.debug('Using {0} to process {1}'.format(protocol_class.name, url))
             self.protocol = protocol_class(self)
             self.protocol.protocol_ready.connect(self.protocol_ready)
             self.protocol.protocol_error.connect(self.protocol_error)
@@ -105,6 +106,7 @@ class VideoPlayer(QWidget):
         if self.protocol:
             self.deactivate_protocol()
         self.playback_stopped.emit(self.channel)
+        self.channel = None
 
     def set_volume(self, volume):
         log.debug('set_volume: {0}'.format(volume))

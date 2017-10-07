@@ -13,9 +13,21 @@ class Channel:
         self.params = json.loads(row.get("params", "{}"))
         self.guide = row.get("guide", "")
         self.audiochannels = json.loads(row.get("audiochannels", "[]"))
+        self._play_index = 0  # url to play from streamurls
 
     def args(self, url):
         return self.params.get(url, {})
+
+    @property
+    def play_index(self):
+        return self._play_index
+
+    @play_index.setter
+    def play_index(self, index):
+        if index < len(self.streamurls):
+            self._play_index = index
+        else:
+            self._play_index = 0
 
     def to_dict(self):
         return {

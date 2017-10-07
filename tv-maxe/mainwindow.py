@@ -22,8 +22,8 @@ class TVMaxeMainWindow(QMainWindow):
         self.stop_btn.clicked.connect(self.stop_btn_clicked)
         self.fullscreen_btn.clicked.connect(self.switch_fullscreen_mode)
         self.volume_slider.sliderMoved.connect(self.volume_changed)
-        self.tv_channel_list.itemActivated.connect(self.activated_channel_item)
-        self.radio_channel_list.itemActivated.connect(self.activated_channel_item)
+        self.tv_channel_list.channelActivated.connect(self.activated_channel)
+        self.radio_channel_list.channelActivated.connect(self.activated_channel)
         
         self.video_player.playback_started.connect(self.video_playback_started)
         self.video_player.playback_paused.connect(self.video_playback_paused)
@@ -97,8 +97,8 @@ class TVMaxeMainWindow(QMainWindow):
     def switch_fullscreen_mode(self, checked=False):
         self.video_player.switch_fullscreen()
 
-    def activated_channel_item(self, channelitem):
-        self.play_channel(channelitem.channel)
+    def activated_channel(self, channel, play_index):
+        self.play_channel(channel, play_index)
 
     def channel_list_available(self, chlist):
         if len(self.menu_show_chlist.actions()) == 1:
@@ -128,13 +128,15 @@ class TVMaxeMainWindow(QMainWindow):
         elif channel.type == 'radio':
             self.radio_channel_list.addChannel(channel)
 
-    def play_channel(self, channel):
+    def play_channel(self, channel, play_index=0):
         self.video_player.stop()
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(0)
         self.progress_bar.show()
-        self.progress_label.setText(self.tr("Now loading: {0} ({1})".format(channel.name, channel.streamurls[0])))
-        self.video_player.play_channel(channel)
+        self.progress_label.setText(
+            self.tr("Now loading: {0} ({1})".format(channel.name, channel.streamurls[play_index]))
+        )
+        self.video_player.play_channel(channel, play_index)
 
     def video_playback_started(self, channel):
         self.play_btn.setIcon(TXIcon('icons/pause-button.svg'))
@@ -152,10 +154,21 @@ class TVMaxeMainWindow(QMainWindow):
         self.progress_bar.setMaximum(1)
 
     def video_playback_error(self, channel):
-        self.play_btn.setIcon(TXIcon('icons/play-button.svg'))
-        self.progress_label.setText(self.tr("Channel not available: {0}".format(channel.name)))
-        self.progress_bar.hide()
-        self.progress_bar.setMaximum(1)
+        if channel.play_index + 1 < len(channel.streamurls):
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(0)
+            self.progress_bar.show()
+            self.progress_label.setText(
+                self.tr("Retrying: {0} ({1})".format(
+                    channel.name, channel.streamurls[channel.play_index + 1]
+                    ))
+            )
+            self.video_player.play_channel(channel, channel.play_index + 1)
+        else:
+            self.play_btn.setIcon(TXIcon('icons/play-button.svg'))
+            self.progress_label.setText(self.tr("Channel not available: {0}".format(channel.name)))
+            self.progress_bar.hide()
+            self.progress_bar.setMaximum(1)
 
     def video_volume_changed(self, value):
         self.volume_slider.setValue(int(value))

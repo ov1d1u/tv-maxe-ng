@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 from channelitem import ChannelItem
 
+from models.channel import Channel
 from channellistmanager import ChannelListManager
 from channelinfo import ChannelInfoDialog
 from epg import EPGDialog
@@ -12,10 +13,12 @@ class ChannelListWidget(QListWidget):
     deleted_channels = QApplication.instance().settings_manager.value("channels/deleted", []) or []  # https://riverbankcomputing.com/pipermail/pyqt/2011-September/030480.html
     _show_deleted = False
     _chlist_filter = None
+    channelActivated = pyqtSignal(Channel, int)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         QApplication.instance().aboutToQuit.connect(self.aboutToQuit)
+        self.itemActivated.connect(self.channelItemActivated)
 
     @property
     def show_deleted(self):
@@ -104,6 +107,9 @@ class ChannelListWidget(QListWidget):
             else:
                 channel_item.setHidden(False)
 
+    def channelItemActivated(self, channel_item):
+        self.channelActivated.emit(channel_item.channel, 0)
+
     def aboutToQuit(self):
         QApplication.instance().settings_manager.setValue("channels/deleted", ChannelListWidget.deleted_channels)
         QApplication.instance().settings_manager.sync()
@@ -111,9 +117,15 @@ class ChannelListWidget(QListWidget):
     # Events
     def contextMenuEvent(self, event):
         current_item = self.currentItem()
+        play_menu_actions = []
 
         menu = QMenu(self)
         play_action = menu.addAction(TXIcon('icons/play-button.svg'), self.tr("Play"))
+        if len(current_item.channel.streamurls) > 1:
+            play_action.setVisible(False)
+            play_menu = menu.addMenu(TXIcon('icons/play-button.svg'), self.tr("Play"))
+            for streamurl in current_item.channel.streamurls:
+                play_menu_actions.append(play_menu.addAction(streamurl))
         record_action = menu.addAction(TXIcon('icons/record-button.svg'), self.tr("Record"))
         menu.addSeparator()
         info_action = menu.addAction(TXIcon('icons/information.svg'), self.tr("Channel info"))
@@ -127,8 +139,10 @@ class ChannelListWidget(QListWidget):
             delete_action.setVisible(False)
         action = menu.exec_(self.mapToGlobal(event.pos()))
 
-        if action == play_action:
-            self.itemActivated.emit(current_item)
+        if action in play_menu_actions:
+            self.channelActivated.emit(current_item.channel, play_menu_actions.index(action))
+        elif action == play_action:
+            self.channelActivated.emit(current_item.channel, 0)
         elif action == delete_action:
             self.deleteChannel(current_item.channel)
         elif action == undelete_action:
