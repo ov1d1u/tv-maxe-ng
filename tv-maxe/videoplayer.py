@@ -113,12 +113,14 @@ class VideoPlayer(QWidget):
         self.player.volume = volume
         self.volume_changed.emit(volume)
 
+    @pyqtSlot()
     def switch_fullscreen(self):
         if self.isFullScreen():
             self.exit_fullscreen()
         else:
             self.enter_fullscreen()
 
+    @pyqtSlot()
     def enter_fullscreen(self):
         if self.isFullScreen():
             return
@@ -134,6 +136,7 @@ class VideoPlayer(QWidget):
         self.fullscreen_changed.emit(True)
         log.debug('Switched to fullscreen')
 
+    @pyqtSlot()
     def exit_fullscreen(self):
         if self.window().findChild(VideoPlayer, "video_player"):
             return  # guard check to be sure this code isn't called twice
@@ -191,13 +194,13 @@ class VideoPlayer(QWidget):
             log.warn("Failed to unregister as a mpv observer")
 
     def mouse_leave(self, state, name):
-        QMetaObject.invokeMethod(self, '_mouse_leave', Qt.QueuedConnection)
+        QMetaObject.invokeMethod(self, '_mouse_leave', Qt.AutoConnection)
 
     def mouse_move(self, state, name):
-        QMetaObject.invokeMethod(self, '_mouse_move', Qt.QueuedConnection)
+        QMetaObject.invokeMethod(self, '_mouse_move', Qt.AutoConnection)
 
     def mouse_dbclk(self, state, name):
-        self.switch_fullscreen()
+        QMetaObject.invokeMethod(self, 'switch_fullscreen', Qt.AutoConnection)
 
     @pyqtSlot()
     def _mouse_move(self):
@@ -231,7 +234,7 @@ class VideoPlayer(QWidget):
         super().keyPressEvent(event)
         if type(event) == QKeyEvent:
             if event.key() == Qt.Key_Escape and self.isFullScreen():
-                QTimer().singleShot(0, self.exit_fullscreen)
+                QMetaObject.invokeMethod(self, 'exit_fullscreen', Qt.AutoConnection)
                 event.accept()
         else:
             event.ignore()

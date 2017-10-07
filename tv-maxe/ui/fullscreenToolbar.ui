@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>829</width>
-    <height>120</height>
+    <height>160</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,7 +24,10 @@
     <widget class="QWidget" name="osd_container" native="true">
      <property name="styleSheet">
       <string notr="true">#osd_container { 
-	background-color: rgba(85, 0, 255, 200);
+	border-color: rgb(235, 235, 235);
+	border-style: solid;
+    border-width: 1px;
+	background-color: rgb(25, 25, 25, 200);
     border-radius: 5px;
 }</string>
      </property>
@@ -44,7 +47,7 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QLabel" name="osd_channel_name">
+         <widget class="ElidedLabel" name="osd_channel_name">
           <property name="font">
            <font>
             <pointsize>18</pointsize>
@@ -61,7 +64,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label_2">
+         <widget class="QLabel" name="clock_label">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -88,7 +91,7 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QLabel" name="label_3">
+         <widget class="ElidedLabel" name="show_name_label">
           <property name="font">
            <font>
             <pointsize>12</pointsize>
@@ -100,12 +103,12 @@
            <string notr="true">color: rgb(255, 255, 255);</string>
           </property>
           <property name="text">
-           <string>Current Show Name</string>
+           <string/>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QProgressBar" name="progressBar">
+         <widget class="QProgressBar" name="show_progress">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -147,8 +150,14 @@
             <height>32</height>
            </size>
           </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
           <property name="text">
            <string/>
+          </property>
+          <property name="default">
+           <bool>false</bool>
           </property>
           <property name="flat">
            <bool>true</bool>
@@ -169,12 +178,18 @@
             <height>32</height>
            </size>
           </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
           <property name="text">
            <string/>
           </property>
           <property name="icon">
            <iconset>
             <normaloff>:/ico/icons/media-playback-stop.png</normaloff>:/ico/icons/media-playback-stop.png</iconset>
+          </property>
+          <property name="default">
+           <bool>false</bool>
           </property>
           <property name="flat">
            <bool>true</bool>
@@ -233,12 +248,18 @@
             <height>16777215</height>
            </size>
           </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
           <property name="text">
            <string/>
           </property>
           <property name="icon">
            <iconset>
             <normaloff>:/ico/icons/view-fullscreen.png</normaloff>:/ico/icons/view-fullscreen.png</iconset>
+          </property>
+          <property name="default">
+           <bool>false</bool>
           </property>
           <property name="flat">
            <bool>true</bool>
@@ -252,6 +273,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ElidedLabel</class>
+   <extends>QLabel</extends>
+   <header>elidedlabel.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
