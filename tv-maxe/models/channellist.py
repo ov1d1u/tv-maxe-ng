@@ -10,6 +10,19 @@ from models.channel import Channel
 log = logging.getLogger(__name__)
 
 class ChannelList:
+    def __init__(self, data, origin_url=None):
+        self.data = data
+        self.origin_url = origin_url
+        if origin_url:
+            self.cached_path = ChannelList.local_filename_for_url(origin_url)
+
+            log.debug('Caching channel list "{0}" to: {1}'.format(origin_url, self.cached_path))
+            fh = open(self.cached_path, 'wb')
+            fh.write(self.data)
+            fh.close()
+        else:
+            self.cached_path = self.origin_url = paths.LOCAL_CHANNEL_DB
+
     @staticmethod
     def local_filename_for_url(origin_url):
         return os.path.join(
@@ -38,19 +51,6 @@ class ChannelList:
         fh.close()
         return ChannelList(data)
 
-    def __init__(self, data, origin_url=None):
-        self.data = data
-        self.origin_url = origin_url
-        if origin_url:
-            self.cached_path = ChannelList.local_filename_for_url(origin_url)
-
-            log.debug('Caching channel list "{0}" to: {1}'.format(origin_url, self.cached_path))
-            fh = open(self.cached_path, 'wb')
-            fh.write(self.data)
-            fh.close()
-        else:
-            self.cached_path = self.origin_url = paths.LOCAL_CHANNEL_DB
-
     @property
     def name(self):
         conn = sqlite3.connect(self.cached_path)
@@ -61,6 +61,17 @@ class ChannelList:
         row = c.fetchone()
         conn.close()
         return row['name']
+
+    @property
+    def epg_url(self):
+        conn = sqlite3.connect(self.cached_path)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+
+        c.execute("SELECT * FROM info")
+        row = c.fetchone()
+        conn.close()
+        return row['epgurl']
 
     @property
     def tv_channels(self):
@@ -115,7 +126,21 @@ class ChannelList:
         conn.commit()
         conn.close()
 
+    def remove_channel(self, channel):
+        conn = sqlite3.connect(self.cached_path)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        if channel.type == 'tv':
+            c.execute("DELETE FROM tv_channels WHERE id=?", (channel.id, ))
+        else:
+            c.execute("DELETE FROM radio_channels WHERE id=?", (channel.id, ))
+        conn.commit()
+        conn.close()
+
     def __eq__(self, obj):
         if isinstance(obj, ChannelList):
             return obj.origin_url == self.origin_url
         return False
+
+    def __hash__(self):
+        return hash(self.origin_url)

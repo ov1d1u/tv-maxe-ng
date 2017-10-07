@@ -15,7 +15,9 @@ class ChannelListManager(QObject):
     channellist_available = pyqtSignal(ChannelList)
     channel_added = pyqtSignal(Channel)
     channel_removed = pyqtSignal(Channel)
-    user_list = None
+
+    channellists = set()
+    user_channellist = None
 
     def load_user_chlist(self):
         if os.path.isfile(paths.LOCAL_CHANNEL_DB):
@@ -23,11 +25,12 @@ class ChannelListManager(QObject):
             data = fh.read()
             fh.close()
 
-            self.user_list = ChannelList(data)
-            self.load_chlist(self.user_list)
+            ChannelListManager.user_channellist = ChannelList(data)
+            self.load_chlist(ChannelListManager.user_channellist)
         else:
-            self.user_list = ChannelList.create_user_db()
-        self.channellist_available.emit(self.user_list)
+            ChannelListManager.user_channellist = ChannelList.create_user_db()
+        ChannelListManager.channellists.add(ChannelListManager.user_channellist)
+        self.channellist_available.emit(ChannelListManager.user_channellist)
 
     def load_cached_chlists(self, subscriptions):
         for subscription in subscriptions:
@@ -41,12 +44,19 @@ class ChannelListManager(QObject):
                     chlist = ChannelList(data, subscription[1])
                     try:
                         self.load_chlist(chlist)
+                        ChannelListManager.channellists.add(chlist)
                         self.channellist_available.emit(chlist)
                     except Exception as e:
                         log.error('Failed to process cached database at {0}: {1}'.format(
                             chlist.cached_path,
                             e
                         ))
+
+    def clear_cached_chlists(self, subscriptions):
+        for subscription in subscriptions:
+            cached_path = ChannelList.local_filename_for_url(subscription[1])
+            if os.path.isfile(cached_path):
+                os.remove(cached_path)
 
     def download_chlists(self, subscriptions):
         self.load_user_chlist()
@@ -74,6 +84,7 @@ class ChannelListManager(QObject):
 
             try:
                 self.load_chlist(chlist)
+                ChannelListManager.channellists.add(chlist)
                 self.channellist_available.emit(chlist)
             except Exception as e:
                 log.error('Failed to process `{0}` ({1}): {2}'.format(
@@ -91,4 +102,4 @@ class ChannelListManager(QObject):
             self.channel_added.emit(channel)
 
     def save_user_channel(self, channel):
-        self.user_list.save_channel(channel)
+        ChannelListManager.user_channellist.save_channel(channel)
