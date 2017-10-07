@@ -147,7 +147,7 @@ class EPGRetriever(QObject):
 
     def process_data(self, json_data):
         try:
-            epg_list = json.loads(json_data)
+            epg_list = json.loads(json_data.decode("utf-8"))
         except json.decoder.JSONDecodeError:
             log.error("Error while decoding JSON data")
             self.epg_data_error.emit("EPG data format is invalid.")
