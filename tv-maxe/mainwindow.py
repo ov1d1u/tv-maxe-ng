@@ -73,6 +73,7 @@ class TVMaxeMainWindow(QMainWindow):
 
         self.splitter.setSizes(settings.value("splitterSizes", [242, self.width()-242], int))
         self.video_player.set_volume(int(settings.value("player/volume", 50)))
+        self.action_hide_channellist.setChecked(settings.value("hideChannelList", False, bool))
 
         self.chlist_manager.download_chlists(settings.get_subscriptions())
 
@@ -190,6 +191,13 @@ class TVMaxeMainWindow(QMainWindow):
             self.tv_channel_list.show_deleted = False
             self.radio_channel_list.show_deleted = False
 
+    @pyqtSlot(bool)
+    def hideShowChannelList(self, hide):
+        if hide:
+            self.playlist_tab_widget.hide()
+        else:
+            self.playlist_tab_widget.show()
+
     @pyqtSlot()
     def openSettings(self):
         settings_dialog = SettingsDialog(self)
@@ -217,7 +225,9 @@ class TVMaxeMainWindow(QMainWindow):
         settings = app.settings_manager
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
-        settings.setValue("splitterSizes", self.splitter.sizes())
+        settings.setValue("hideChannelList", self.action_hide_channellist.isChecked())
+        if not self.action_hide_channellist.isChecked():
+            settings.setValue("splitterSizes", self.splitter.sizes())
         settings.setValue("player/volume", self.volume_slider.value())
 
         super().closeEvent(event)

@@ -428,7 +428,7 @@
      <string>V&amp;iew</string>
     </property>
     <addaction name="actionFull_screen"/>
-    <addaction name="actionShow_channel_list"/>
+    <addaction name="action_hide_channellist"/>
     <addaction name="separator"/>
     <addaction name="actionRadio_mode"/>
    </widget>
@@ -477,7 +477,7 @@
     <string>&amp;Full screen</string>
    </property>
   </action>
-  <action name="actionShow_channel_list">
+  <action name="action_hide_channellist">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -617,11 +617,28 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_hide_channellist</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>hideShowChannelList()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>421</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>openSettings()</slot>
   <slot>showAddChannelDialog()</slot>
   <slot>showDeletedChannels()</slot>
   <slot>reloadChannelList()</slot>
+  <slot>hideShowChannelList(bool)</slot>
  </slots>
 </ui>
