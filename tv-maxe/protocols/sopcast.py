@@ -111,8 +111,8 @@ class SopCast(Protocol):
                     str(self.inport),
                     str(self.outport)
                 ],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE)
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL)
             self.monitor_thread.start()
         except Exception as e:
             log.debug(str(e))
