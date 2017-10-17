@@ -11,6 +11,6 @@ class TXIcon(QIcon):
         if not tint_color:
             pxr.fill(palette.color(QPalette.ButtonText))
         else:
-             pxr.fill(tint_color)
+            pxr.fill(tint_color)
         pxr.setMask(px.createMaskFromColor((Qt.transparent)))
         super().__init__(pxr)

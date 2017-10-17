@@ -30,6 +30,8 @@ class TVMaxeMainWindow(QMainWindow):
         self.video_player.playback_stopped.connect(self.video_playback_stopped)
         self.video_player.playback_error.connect(self.video_playback_error)
         self.video_player.volume_changed.connect(self.video_volume_changed)
+        self.video_player.chromecast_available.connect(self.chromecast_available)
+        self.video_player.chromecast_connected.connect(self.chromecast_connected)
 
         self.chlist_manager = ChannelListManager()
         self.chlist_manager.channel_added.connect(self.channel_added)
@@ -63,6 +65,11 @@ class TVMaxeMainWindow(QMainWindow):
         self.play_btn.setIcon(TXIcon('icons/play-button.svg'))
         self.stop_btn.setIcon(TXIcon('icons/stop-button.svg'))
         self.fullscreen_btn.setIcon(TXIcon('icons/fullscreen.svg'))
+        self.cast_btn.setIcon(TXIcon('icons/cast.svg'))
+
+        self.cast_label_pixmap.setHidden(True)
+        self.cast_label.setHidden(True)
+        self.cast_btn.hide()
 
     def load_settings(self):
         log.debug('Loading settings...')
@@ -83,12 +90,7 @@ class TVMaxeMainWindow(QMainWindow):
         log.debug('Settings loaded')
 
     def play_btn_clicked(self, checked=False):
-        from videoplayer import VideoPlayerState
-        player_state = self.video_player.get_state()
-        if player_state is VideoPlayerState.PLAYER_PLAYING:
-            self.video_player.pause()
-        else:
-            self.video_player.unpause()
+        self.video_player.switch_pause()
 
     def stop_btn_clicked(self, checked=False):
         self.video_player.stop()
@@ -177,6 +179,22 @@ class TVMaxeMainWindow(QMainWindow):
     def video_volume_changed(self, value):
         self.volume_slider.setValue(int(value))
 
+    def chromecast_available(self, devices):
+        if devices:
+            log.debug("Found {0} Chromecast compatible devices".format(len(devices)))
+            cast_menu = QMenu(self.cast_btn)
+            for chromecast in devices:
+                action = cast_menu.addAction(chromecast.device.friendly_name)
+                action.setProperty("cast-device", chromecast)
+            cast_menu.triggered.connect(self.selectChromecast)
+            self.cast_btn.setMenu(cast_menu)
+            self.cast_btn.show()
+        else:
+            log.debug("No Chromecast devices found")
+
+    def chromecast_connected(self, device):
+        self.progress_label.setText(self.tr("Connected to {0}".format(device.device.friendly_name)))
+
     @pyqtSlot()
     def reloadChannelList(self):
         self.tv_channel_list.clear()
@@ -212,6 +230,26 @@ class TVMaxeMainWindow(QMainWindow):
         add_channel_dialog.channel_saved.connect(self.custom_channel_saved)
         add_channel_dialog.exec()
 
+    @pyqtSlot(QAction)
+    def selectChromecast(self, action):
+        device = action.property("cast-device")
+        if self.video_player.chromecast_manager.current_device == device:
+            self.video_player.disconnect_chromecast()
+            action.setText(device.device.friendly_name)
+            self.progress_label.setText(self.tr("Disconnected from {0}".format(device.device.friendly_name)))
+        elif self.video_player.chromecast_manager.current_device:
+            for cast_action in self.cast_btn.menu().actions():
+                cast_device = cast_action.property("cast-device")
+                cast_action.setText(cast_device.device.friendly_name)
+            self.video_player.disconnect_chromecast()
+            self.progress_label.setText(self.tr("Connecting to {0}".format(device.device.friendly_name)))
+            self.video_player.connect_chromecast(device)
+            action.setText(self.tr("Disconnect: {0}").format(device.device.friendly_name))
+        else:
+            self.progress_label.setText(self.tr("Connecting to {0}".format(device.device.friendly_name)))
+            self.video_player.connect_chromecast(device)
+            action.setText(self.tr("Disconnect: {0}").format(device.device.friendly_name))
+
     def custom_channel_saved(self, channel):
         if channel.type == 'tv':
             self.tv_channel_list.addChannel(channel)
@@ -222,8 +260,6 @@ class TVMaxeMainWindow(QMainWindow):
     # Qt Events
 
     def closeEvent(self, event):
-        self.video_player.stop()
-
         app = QApplication.instance()
         settings = app.settings_manager
         settings.setValue("geometry", self.saveGeometry())
@@ -233,6 +269,7 @@ class TVMaxeMainWindow(QMainWindow):
             settings.setValue("splitterSizes", self.splitter.sizes())
         settings.setValue("player/volume", self.volume_slider.value())
 
+        self.video_player.quit()
         super().closeEvent(event)
 
 

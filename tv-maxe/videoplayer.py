@@ -1,13 +1,14 @@
 import mpv
 import logging
 import platform
-from PyQt5.QtCore import Qt, QMetaObject, QTimer, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QWidget, QSizePolicy
-from PyQt5.QtGui import QKeyEvent, QCursor
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
 from enum import Enum
+from PyQt5.QtCore import Qt, QMetaObject, QTimer, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QSizePolicy
+from PyQt5.QtGui import QKeyEvent, QCursor, QPixmap
 
 from models.channel import Channel
+from chromecast import Chromecast
 from fullscreentoolbar import FullscreenToolbar
 
 log = logging.getLogger(__name__)
@@ -26,6 +27,9 @@ class VideoPlayer(QWidget):
     playback_error = pyqtSignal('PyQt_PyObject')
     volume_changed = pyqtSignal(int)
     fullscreen_changed = pyqtSignal(bool)
+    chromecast_available = pyqtSignal(list)
+    chromecast_connected = pyqtSignal('PyQt_PyObject')
+    chromecast_disconnected = pyqtSignal('PyQt_PyObject')
 
     def __init__(self, parent=None, flags=Qt.Widget):
         super().__init__(parent, flags)
@@ -42,6 +46,13 @@ class VideoPlayer(QWidget):
         self.mousehide_timer = QTimer()
         self.mousehide_timer.setSingleShot(True)
         self.mousehide_timer.timeout.connect(self._hide_mouse)
+
+        self.chromecast_manager = Chromecast(self)
+        self.chromecast_manager.devices_found.connect(self.chromecast_devices_found)
+        self.chromecast_manager.device_connected.connect(self.chromecast_device_connected)
+        self.chromecast_manager.device_playback_started.connect(self.chromecast_playback_started)
+        self.chromecast_manager.device_playback_stopped.connect(self.chromecast_playback_stopped)
+        self.chromecast_manager.device_playback_paused.connect(self.chromecast_playback_paused)
 
     def get_state(self):
         if self.player.idle_active == True:
@@ -70,11 +81,31 @@ class VideoPlayer(QWidget):
         else:
             log.error('No suitable protocol found for {0}'.format(url))
 
+    def chromecast_devices_found(self, devices):
+        self.chromecast_available.emit(devices)
+
+    def chromecast_device_connected(self, device):
+        px = QPixmap('icons/cast.svg')
+        pxr = QPixmap(px.size())
+        pxr.fill(Qt.lightGray)
+        pxr.setMask(px.createMaskFromColor((Qt.transparent)))
+        self.window().cast_label_pixmap.setPixmap(pxr)
+        self.window().cast_label_pixmap.setScaledContents(True)
+        self.window().cast_label.setText(self.tr("Connected to: {0}".format(device.device.friendly_name)))
+        self.window().cast_label_pixmap.setHidden(False)
+        self.window().cast_label.setHidden(False)
+        self.chromecast_connected.emit(device)
+        if self.player.path:
+            self.chromecast_manager.play_url(self.player.path)
+
     def protocol_ready(self, url):
         self.player.observe_property('core-idle', self.idle_observer)
         self.player.register_event_callback(self.event_observer)
         log.debug('Ready to play {0} via {1}'.format(self.channel.id, url))
-        self.player.play(url)
+        if self.chromecast_manager.current_device:
+            self.chromecast_manager.play_url(url)
+        else:
+            self.player.play(url)
 
     def protocol_error(self, url, error_message):
         log.debug('Protocol returned error, stopping playback')
@@ -90,13 +121,18 @@ class VideoPlayer(QWidget):
         self.protocol.stop()
         self.protocol = None
 
-    def pause(self):
-        log.debug('pause')
-        self.player.pause = True
-
-    def unpause(self):
-        log.debug('resume')
-        self.player.pause = False
+    def switch_pause(self):
+        if self.chromecast_manager.current_device:
+            media_controller = self.chromecast_manager.current_device.media_controller
+            if media_controller.status.player_is_playing:
+                self.chromecast_manager.pause()
+            else:
+                self.chromecast_manager.play()
+        else:
+            if self.get_state() == VideoPlayerState.PLAYER_PAUSED:
+                self.player.play()
+            else:
+                self.player.pause()
 
     def stop(self):
         log.debug('stop')
@@ -105,13 +141,44 @@ class VideoPlayer(QWidget):
         self.exit_fullscreen()
         if self.protocol:
             self.deactivate_protocol()
+        if self.chromecast_manager.current_device:
+            self.chromecast_manager.stop()
         self.playback_stopped.emit(self.channel)
         self.channel = None
 
     def set_volume(self, volume):
         log.debug('set_volume: {0}'.format(volume))
-        self.player.volume = volume
+        if self.chromecast_manager.current_device:
+            self.chromecast_manager.set_volume(volume)
+        else: 
+            self.player.volume = volume
         self.volume_changed.emit(volume)
+
+    def connect_chromecast(self, device):
+        self.chromecast_manager.select_device(device)
+
+    def disconnect_chromecast(self):
+        self.stop()
+        self.chromecast_manager.disconnect()
+        self.window().cast_label_pixmap.setHidden(True)
+        self.window().cast_label.setHidden(True)
+
+    def chromecast_playback_started(self):
+        # We don't have a self.channel if we're playing the splash screen
+        if self.channel:
+            self.playback_started.emit(self.channel)
+
+            if self.player.path:
+                # Stop the video player
+                self.player.play('')
+
+    def chromecast_playback_stopped(self):
+        if self.channel:
+            self.playback_stopped.emit(self.channel)
+
+    def chromecast_playback_paused(self):
+        if self.channel:
+            self.playback_paused.emit(self.channel)
 
     @pyqtSlot()
     def switch_fullscreen(self):
@@ -156,6 +223,9 @@ class VideoPlayer(QWidget):
         log.debug('Returned from fullscreen')
 
     def event_observer(self, event):
+        if self.chromecast_manager.current_device:
+            return  # Ignore events if we're connected to a Chromecast
+
         event_id = event.get('event_id', None)
         if event_id == mpv.MpvEventID.END_FILE:  # end-file
             log.debug('Processing event id: {0} data: {1}'.format(event_id, event))
@@ -174,6 +244,9 @@ class VideoPlayer(QWidget):
                     self.deactivate_protocol()
 
     def idle_observer(self, name, value):
+        if self.chromecast_manager.current_device:
+            return  # Ignore events if we're connected to a Chromecast
+
         log.debug('idle_observer: {0} {1}'.format(name, value))
         if value == False:
             log.debug('Started playback')
@@ -202,6 +275,11 @@ class VideoPlayer(QWidget):
     def mouse_dbclk(self, state, name):
         QMetaObject.invokeMethod(self, 'switch_fullscreen', Qt.AutoConnection)
 
+    def quit(self):
+        self.stop()
+        if self.chromecast_manager.current_device:
+            self.chromecast_manager.disconnect()
+
     @pyqtSlot()
     def _mouse_move(self):
         if self.isFullScreen():
@@ -222,7 +300,7 @@ class VideoPlayer(QWidget):
         self.mousehide_timer.stop()
 
     def _hide_mouse(self):
-        if self.fullscreen_toolbar.isHidden():
+        if self.get_state() != VideoPlayerState.PLAYER_IDLE and self.fullscreen_toolbar.isHidden():
             QApplication.instance().setOverrideCursor(QCursor(Qt.BlankCursor))
 
     def _show_mouse(self):
