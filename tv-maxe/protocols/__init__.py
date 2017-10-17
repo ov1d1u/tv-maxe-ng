@@ -1,6 +1,12 @@
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import pyqtSignal, QObject
 
+class ProtocolException(Exception):
+    def __init__(self, message, *args, **kwargs):
+        self.message = message
+        super().__init__(*args, **kwargs)
+
+
 class Protocol(QObject):
     name = "Generic Protocol"
     desc = "Generic Protocol Backend for TV-Maxe"

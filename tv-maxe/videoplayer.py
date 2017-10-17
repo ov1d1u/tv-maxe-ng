@@ -4,9 +4,10 @@ import platform
 from urllib.parse import urlparse, quote_plus
 from enum import Enum
 from PyQt5.QtCore import Qt, QMetaObject, QTimer, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QSizePolicy, QMessageBox
 from PyQt5.QtGui import QKeyEvent, QCursor, QPixmap
 
+from protocols import ProtocolException
 from models.channel import Channel
 from chromecast import Chromecast
 from fullscreentoolbar import FullscreenToolbar
@@ -74,10 +75,20 @@ class VideoPlayer(QWidget):
         if app.protocol_plugins.get(url_components.scheme, None):
             protocol_class = app.protocol_plugins[url_components.scheme]
             log.debug('Using {0} to process {1}'.format(protocol_class.name, url))
-            self.protocol = protocol_class(self)
-            self.protocol.protocol_ready.connect(self.protocol_ready)
-            self.protocol.protocol_error.connect(self.protocol_error)
-            self.protocol.load_url(url, channel.args(url))
+            try:
+                self.protocol = protocol_class(self)
+                self.protocol.protocol_ready.connect(self.protocol_ready)
+                self.protocol.protocol_error.connect(self.protocol_error)
+                self.protocol.load_url(url, channel.args(url))
+            except ProtocolException as e:
+                log.error(e.message)
+                QMessageBox.critical(
+                    self,
+                    self.tr("Error playing channel"),
+                    self.tr("Protocol crashed with error: {0}").format(e.message)
+                )
+                self.playback_error.emit(self.channel)
+                self.channel = None
         else:
             log.error('No suitable protocol found for {0}'.format(url))
 

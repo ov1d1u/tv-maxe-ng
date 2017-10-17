@@ -81,8 +81,11 @@ def parse_args():
 
 if __name__ == '__main__':
     parse_args()
-    log.debug('Current working directory: {0}'.format(os.path.dirname(os.path.realpath(__file__))))
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    if getattr(sys, 'frozen', False):
+        os.chdir(sys._MEIPASS)
+    else:
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    log.debug('Current working directory: {0}'.format(os.getcwd()))
     app = TVMaxe(sys.argv)
     sys.exit(app.exec_())
     log.debug('Exiting app...')

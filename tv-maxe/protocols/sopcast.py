@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import shutil
 import time
@@ -7,7 +8,7 @@ import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QThread, QObject, QTimer, QMetaObject, pyqtSignal
 
-from protocols import Protocol
+from protocols import Protocol, ProtocolException
 from util import get_open_port
 
 log = logging.getLogger(__name__)
@@ -47,14 +48,17 @@ class SopCast(Protocol):
 
         self.spsc = None
         for spsc in ["sp-sc", "sp-sc-auth", "sop"]:
-            self.spsc = shutil.which(spsc)
+            if getattr(sys, 'frozen', False):
+                self.spsc = os.path.join(sys._MEIPASS, 'sp-sc')
+            else:
+                self.spsc = shutil.which(spsc) or shutil.which(spsc, '.')
             if self.spsc:
                 log.debug('Found SopCast executable at {0}'.format(self.spsc))
                 break
 
         if not self.spsc:
             log.error("SopCast executable not found")
-            raise OSError(42, "SopCast executable not found")
+            raise ProtocolException("SopCast executable not found")
 
         settings = QApplication.instance().settings_manager
         if settings.value("sopcast/staticports", False):
