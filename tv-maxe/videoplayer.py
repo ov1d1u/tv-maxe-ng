@@ -141,9 +141,9 @@ class VideoPlayer(QWidget):
                 self.chromecast_manager.play()
         else:
             if self.get_state() == VideoPlayerState.PLAYER_PAUSED:
-                self.player.play()
+                self.player.pause = False
             else:
-                self.player.pause()
+                self.player.pause = True
 
     def stop(self):
         log.debug('stop')
