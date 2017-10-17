@@ -52,6 +52,9 @@ class TVMaxeMainWindow(QMainWindow):
         os_type = platform.system()
         log.info('Detected OS type: {0}'.format(os_type))
         if os_type == 'Darwin':
+            from AppKit import NSWindow, NSUserDefaults
+            NSWindow.setAllowsAutomaticWindowTabbing_(False)
+            NSUserDefaults.standardUserDefaults().setBool_forKey_(False, "NSFullScreenMenuItemEverywhere")
             self.playlist_tab_widget.setDocumentMode(True)
 
         self.load_settings()
