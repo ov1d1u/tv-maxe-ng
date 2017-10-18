@@ -59,6 +59,12 @@ class TVMaxeMainWindow(QMainWindow):
             NSUserDefaults.standardUserDefaults().setBool_forKey_(False, "NSFullScreenMenuItemEverywhere")
             self.playlist_tab_widget.setDocumentMode(True)
 
+            channel_list_action = self.menubar.actions()[0].menu().actions()[0]
+            preferences_list_action = self.menubar.actions()[0].menu().actions()[1]
+            self.menubar.removeAction(self.menubar.actions()[0])
+            channel_list_action.menu().addAction(preferences_list_action)
+            self.menubar.insertAction(self.menubar.actions()[0], channel_list_action)
+
         self.load_settings()
 
         # Set custom icons

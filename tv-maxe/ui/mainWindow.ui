@@ -481,7 +481,7 @@
     </property>
     <widget class="QMenu" name="menuList">
      <property name="title">
-      <string>&amp;Channel list</string>
+      <string>&amp;Channel List</string>
      </property>
      <widget class="QMenu" name="menu_show_chlist">
       <property name="title">
@@ -544,7 +544,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Show deleted channels</string>
+    <string>&amp;Show Deleted Channels</string>
    </property>
   </action>
   <action name="actionFilter_Channel">
