@@ -1,19 +1,13 @@
 # -*- mode: python -*-
 
-import shutil
-
 block_cipher = None
 
-a = Analysis(['tv-maxe/tvmaxe.py'],
-             pathex=['tv-maxe/'],
-             binaries=[(shutil.which('sp-sc'), '.')],
-             datas=[('tv-maxe/icons', 'icons'),
-                    ('tv-maxe/images', 'images'),
-                    ('tv-maxe/models', 'models'),
-                    ('tv-maxe/protocols', 'protocols'),
-                    ('tv-maxe/ui', 'ui'),
-                    ('tv-maxe/i18n/*.qm', 'i18n')],
-             hiddenimports=['librtmp', 'videoplayer', 'channellistwidget', 'elidedlabel'],
+
+a = Analysis(['tvmaxe.py'],
+             pathex=['.', '/Users/ovidiu/Projects/tv-maxe-ng/tv-maxe'],
+             binaries=[],
+             datas=[],
+             hiddenimports=['librtmp', 'channellistwidget', 'elidedlabel'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -37,7 +31,3 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                name='tvmaxe')
-app = BUNDLE(exe,
-         name='TV-Maxe.app',
-         icon='tv-maxe/icons/tvmaxe.icns',
-         bundle_identifier='org.tv-maxe.desktop')
