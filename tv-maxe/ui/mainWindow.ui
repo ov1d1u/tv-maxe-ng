@@ -399,13 +399,6 @@
      </widget>
     </item>
     <item>
-     <widget class="Line" name="line">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
      <widget class="QWidget" name="bottom_bar" native="true">
       <layout class="QHBoxLayout" name="bottom_layout" stretch="0,0,0">
        <property name="spacing">
